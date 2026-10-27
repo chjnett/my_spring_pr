@@ -1,0 +1,22 @@
+spring:
+  application:
+    name: secureflow
+
+  datasource:
+    url: jdbc:postgresql://localhost:${DB_PORT:5433}/secureflow
+    username: ${DB_USERNAME:secureflow}
+    password: ${DB_PASSWORD:devpassword}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+
+    show-sql: true
+
+    properties:
+      hibernate:
+        format_sql: true
+
+server:
+  port: 8081
