@@ -10,4 +10,5 @@
 | 사례 | 핵심 증거 |
 | --- | --- |
 | [동시 가입과 PostgreSQL UNIQUE](concurrent-signup-unique-constraint.md) | 동시 요청 20건 → 저장 1건, UNIQUE 충돌 19건 |
+| [동시 권한 부여와 모듈 경계](role-grant-concurrency.md) | 동시 요청 20건 → 저장 1건, UNIQUE 충돌 19건 |
 | [사용자 수정 API와 변경 감지](user-update-api.md) | `save()` 없이 변경 감지, 성공·실패 단위 테스트 |

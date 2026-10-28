@@ -22,6 +22,11 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, "DUPLICATE_EMAIL", exception.getMessage(), Map.of());
     }
 
+    @ExceptionHandler(DuplicateRoleGrantException.class)
+    public ResponseEntity<ErrorResponse> handleDuplicateRoleGrant(DuplicateRoleGrantException exception) {
+        return response(HttpStatus.CONFLICT, "DUPLICATE_ROLE_GRANT", exception.getMessage(), Map.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();

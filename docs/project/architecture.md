@@ -16,6 +16,16 @@ UserService (@Transactional) 유스케이스, 중복 오류를 도메인 오류�
 UserRepository               JPA 조회·저장
     ↓
 PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
+
+RoleGrantController          권한 부여 HTTP 계약
+    ↓
+RoleGrantService             권한 부여 유스케이스와 트랜잭션
+    ↓
+UserExistencePort            user 모듈에 요구하는 최소 조회 계약
+    ↓
+UserJpaExistenceAdapter      현재는 UserRepository로 계약을 구현
+    ↓
+RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
 ```
 
 ## 기술 스택
@@ -36,6 +46,7 @@ PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
 | --- | --- | --- |
 | `POST /api/users` | `201 Created` | 잘못된 입력 `400`, 중복 이메일 `409 DUPLICATE_EMAIL` |
 | `PATCH /api/users/{id}` | `200 OK` | 없는 사용자 `404 USER_NOT_FOUND`, 잘못된 이름 `400` |
+| `POST /api/users/{userId}/role-grants` | `201 Created` | 없는 사용자 `404`, 같은 권한 `409 DUPLICATE_ROLE_GRANT` |
 
 ## 설계 원칙
 
@@ -44,7 +55,8 @@ PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
 3. Entity는 자신의 상태 변경 메서드로 불변 조건을 드러낸다.
 4. 사전 조회는 사용자 친화적 오류를 위한 보조 수단이고, 최종 중복 방지는 DB 제약이 맡는다.
 5. 테스트는 개발용 Compose DB를 공유하지 않는다.
+6. 모듈 경계를 넘을 때는 다른 모듈의 Entity가 아니라 ID와 Port 계약을 사용한다.
 
 ## 다음 확장 경로
 
-`RoleGrant`를 별도 Entity로 추가하고, `UNIQUE(user_id, role)`로 동일 권한의 동시 부여를 막는다. 이 기능은 멱등성 키와 낙관적 락을 비교하는 다음 사례 연구의 기반이 된다.
+`RoleGrant`를 별도 Entity로 추가했고, `UNIQUE(user_id, role)`로 동일 권한의 동시 부여를 막았다. 다음 단계에서는 멱등성 키와 낙관적 락을 비교한다.
