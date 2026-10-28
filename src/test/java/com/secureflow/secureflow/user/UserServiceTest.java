@@ -11,7 +11,9 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.dao.DataIntegrityViolationException;
 
+import java.sql.SQLException;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -46,14 +48,14 @@ class UserServiceTest {
         CreateUserRequest request = new CreateUserRequest("Hyeonjun", "hyeonjun@example.com");
         User savedUser = new User(request.name(), request.email());
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(savedUser);
+        when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
 
         UserResponse response = userService.createUser(request);
 
         assertThat(response.name()).isEqualTo("Hyeonjun");
         assertThat(response.email()).isEqualTo("hyeonjun@example.com");
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
-        verify(userRepository).save(captor.capture());
+        verify(userRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getEmail()).isEqualTo(request.email());
     }
 
@@ -64,6 +66,35 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.createUser(new CreateUserRequest("Hyeonjun", "taken@example.com")))
                 .isInstanceOf(DuplicateEmailException.class);
+    }
+
+    @Test
+    void translatesDatabaseUniqueViolationToDuplicateEmail() {
+        CreateUserRequest request = new CreateUserRequest("Hyeonjun", "race@example.com");
+        SQLException postgresException = new SQLException(
+                "duplicate key value violates unique constraint \"uk_user_email\"",
+                "23505"
+        );
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.saveAndFlush(any(User.class)))
+                .thenThrow(new DataIntegrityViolationException("duplicate email", postgresException));
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isInstanceOf(DuplicateEmailException.class)
+                .hasMessageContaining(request.email());
+    }
+
+    @Test
+    void doesNotTranslateUnrelatedIntegrityViolationToDuplicateEmail() {
+        CreateUserRequest request = new CreateUserRequest("Hyeonjun", "error@example.com");
+        SQLException postgresException = new SQLException("null value violates not-null constraint", "23502");
+        DataIntegrityViolationException integrityViolation =
+                new DataIntegrityViolationException("invalid user", postgresException);
+        when(userRepository.existsByEmail(request.email())).thenReturn(false);
+        when(userRepository.saveAndFlush(any(User.class))).thenThrow(integrityViolation);
+
+        assertThatThrownBy(() -> userService.createUser(request))
+                .isSameAs(integrityViolation);
     }
 
     @Test

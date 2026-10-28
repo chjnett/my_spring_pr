@@ -9,7 +9,7 @@ Spring Boot와 PostgreSQL로 데이터 정합성, 트랜잭션, 권한 부여를
 3. 터미널에서 PostgreSQL을 실행한다.
 
    ```bash
-   docker compose up -d
+   docker compose up -d --wait
    ```
 
    SecureFlow은 호스트 포트 `5433`을 사용한다. 이미 다른 PostgreSQL이 `5432`를 쓰는 개발 환경과 충돌하지 않게 분리한 설정이다.
@@ -34,5 +34,4 @@ curl -i -X POST http://localhost:8081/api/users \
   -d '{"name":"Hyeonjun","email":"hyeonjun@example.com"}'
 ```
 
-학습 체크리스트는 [docs/study/01-spring-boot-basics.md](docs/study/01-spring-boot-basics.md)에서 관리한다.
-트러블슈팅 원본 기록은 [docs/troubleshooting/README.md](docs/troubleshooting/README.md)에 쌓는다.
+문서의 시작점은 [docs/README.md](docs/README.md)다. 학습, 딥다이브, 프로젝트 설계, PAAR 사례, 트러블슈팅을 분리해 관리한다.

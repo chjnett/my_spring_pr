@@ -7,9 +7,11 @@ import com.secureflow.secureflow.user.dto.UpdateUserRequest;
 import com.secureflow.secureflow.user.dto.UserResponse;
 
 import jakarta.validation.Valid;
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.sql.SQLException;
 import java.util.List;
 
 @Service
@@ -32,9 +34,16 @@ public class UserService {
                 request.email()
 
         );
-        User savedUser = userRepository.save(user);
-
-        return toResponse(savedUser);
+        try {
+            // flush 시점에 UNIQUE 위반을 관찰해야 API 계약으로 번역할 수 있다.
+            User savedUser = userRepository.saveAndFlush(user);
+            return toResponse(savedUser);
+        } catch (DataIntegrityViolationException exception) {
+            if (isDuplicateEmailConstraint(exception)) {
+                throw new DuplicateEmailException(request.email(), exception);
+            }
+            throw exception;
+        }
 
     }
 
@@ -86,5 +95,19 @@ public class UserService {
                 user.getEmail()
         );
 
+    }
+
+    private boolean isDuplicateEmailConstraint(DataIntegrityViolationException exception) {
+        Throwable cause = exception;
+        while (cause != null) {
+            if (cause instanceof SQLException sqlException
+                    && "23505".equals(sqlException.getSQLState())
+                    && sqlException.getMessage() != null
+                    && sqlException.getMessage().contains("uk_user_email")) {
+                return true;
+            }
+            cause = cause.getCause();
+        }
+        return false;
     }
 }
