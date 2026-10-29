@@ -26,6 +26,20 @@ Spring Boot와 PostgreSQL로 데이터 정합성, 트랜잭션, 권한 부여를
    ./gradlew test
    ```
 
+## 멱등성 키 관측
+
+애플리케이션 실행 후 Prometheus와 Grafana를 시작한다.
+
+```bash
+docker compose up -d prometheus grafana
+```
+
+- Prometheus: `http://localhost:9090`
+- Grafana: `http://localhost:3001` (`admin` / `secureflow`)
+- 애플리케이션 메트릭: `http://localhost:8081/actuator/prometheus`
+
+세부 실습은 [Grafana 관측 가이드](docs/study/06-idempotency-observability.md)에 정리했다.
+
 ## 첫 API 호출
 
 ```bash

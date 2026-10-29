@@ -19,7 +19,9 @@ PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
 
 RoleGrantController          권한 부여 HTTP 계약
     ↓
-RoleGrantService             권한 부여 유스케이스와 트랜잭션
+RoleGrantService             권한 부여·Idempotency-Key 유스케이스와 트랜잭션
+    ↓
+IdempotencyRecordRepository  같은 네트워크 작업의 원자적 선점·응답 재사용
     ↓
 UserExistencePort            user 모듈에 요구하는 최소 조회 계약
     ↓
@@ -46,7 +48,7 @@ RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
 | --- | --- | --- |
 | `POST /api/users` | `201 Created` | 잘못된 입력 `400`, 중복 이메일 `409 DUPLICATE_EMAIL` |
 | `PATCH /api/users/{id}` | `200 OK` | 없는 사용자 `404 USER_NOT_FOUND`, 잘못된 이름 `400` |
-| `POST /api/users/{userId}/role-grants` | `201 Created` | 없는 사용자 `404`, 같은 권한 `409 DUPLICATE_ROLE_GRANT` |
+| `POST /api/users/{userId}/role-grants` | `201 Created` | `Idempotency-Key` 재사용 본문 불일치 `422`, 새 키의 같은 권한 `409` |
 
 ## 설계 원칙
 
@@ -56,7 +58,8 @@ RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
 4. 사전 조회는 사용자 친화적 오류를 위한 보조 수단이고, 최종 중복 방지는 DB 제약이 맡는다.
 5. 테스트는 개발용 Compose DB를 공유하지 않는다.
 6. 모듈 경계를 넘을 때는 다른 모듈의 Entity가 아니라 ID와 Port 계약을 사용한다.
+7. 멱등성 키는 `UNIQUE(user_id, request_scope, idempotency_key)`로 먼저 선점하고, 권한 변경과 최초 응답 기록을 하나의 트랜잭션으로 완료한다.
 
 ## 다음 확장 경로
 
-`RoleGrant`를 별도 Entity로 추가했고, `UNIQUE(user_id, role)`로 동일 권한의 동시 부여를 막았다. 다음 단계에서는 멱등성 키와 낙관적 락을 비교한다.
+`RoleGrant`의 비즈니스 중복 제약과 `IdempotencyRecord`의 재시도 식별 제약을 분리했다. 다음 단계에서는 멱등성 기록의 TTL·실패 복구와 낙관적 락을 비교한다.

@@ -27,6 +27,16 @@ public class GlobalExceptionHandler {
         return response(HttpStatus.CONFLICT, "DUPLICATE_ROLE_GRANT", exception.getMessage(), Map.of());
     }
 
+    @ExceptionHandler(IdempotencyKeyReuseException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyKeyReuse(IdempotencyKeyReuseException exception) {
+        return response(HttpStatus.UNPROCESSABLE_CONTENT, "IDEMPOTENCY_KEY_REUSED", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(IdempotencyRequestInProgressException.class)
+    public ResponseEntity<ErrorResponse> handleIdempotencyRequestInProgress(IdempotencyRequestInProgressException exception) {
+        return response(HttpStatus.CONFLICT, "IDEMPOTENCY_REQUEST_IN_PROGRESS", exception.getMessage(), Map.of());
+    }
+
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidation(MethodArgumentNotValidException exception) {
         Map<String, String> fieldErrors = new LinkedHashMap<>();

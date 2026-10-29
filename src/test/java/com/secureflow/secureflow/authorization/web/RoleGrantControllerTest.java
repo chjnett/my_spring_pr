@@ -1,6 +1,7 @@
 package com.secureflow.secureflow.authorization.web;
 
 import com.secureflow.secureflow.authorization.application.GrantedRole;
+import com.secureflow.secureflow.authorization.application.IdempotentGrantedRole;
 import com.secureflow.secureflow.authorization.application.RoleGrantService;
 import com.secureflow.secureflow.authorization.domain.Role;
 import com.secureflow.secureflow.global.exception.DuplicateRoleGrantException;
@@ -15,6 +16,7 @@ import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @WebMvcTest(RoleGrantController.class)
@@ -28,11 +30,12 @@ class RoleGrantControllerTest {
 
     @Test
     void returns201WhenRoleIsGranted() throws Exception {
-        when(roleGrantService.grantRole(any(), any()))
-                .thenReturn(new GrantedRole(1L, 10L, Role.ADMIN));
+        when(roleGrantService.grantRoleIdempotently(any(), any(), any()))
+                .thenReturn(new IdempotentGrantedRole(new GrantedRole(1L, 10L, Role.ADMIN), false));
 
         mockMvc.perform(post("/api/users/10/role-grants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "first-request")
                         .content("""
                                 {"role":"ADMIN"}
                                 """))
@@ -44,15 +47,32 @@ class RoleGrantControllerTest {
 
     @Test
     void returns409WhenRoleWasAlreadyGranted() throws Exception {
-        when(roleGrantService.grantRole(any(), any()))
+        when(roleGrantService.grantRoleIdempotently(any(), any(), any()))
                 .thenThrow(new DuplicateRoleGrantException(10L, Role.ADMIN));
 
         mockMvc.perform(post("/api/users/10/role-grants")
                         .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "new-duplicate-request")
                         .content("""
                                 {"role":"ADMIN"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.code").value("DUPLICATE_ROLE_GRANT"));
+    }
+
+    @Test
+    void returnsSaved201ResultWhenRequestIsReplayed() throws Exception {
+        when(roleGrantService.grantRoleIdempotently(any(), any(), any()))
+                .thenReturn(new IdempotentGrantedRole(new GrantedRole(1L, 10L, Role.ADMIN), true));
+
+        mockMvc.perform(post("/api/users/10/role-grants")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "retry-of-first-request")
+                        .content("""
+                                {"role":"ADMIN"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Idempotency-Replayed", "true"))
+                .andExpect(jsonPath("$.id").value(1));
     }
 }

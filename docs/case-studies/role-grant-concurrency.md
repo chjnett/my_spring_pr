@@ -15,7 +15,7 @@
 | `existsByUserIdAndRole()` 사전 검사 | 빠른 409 응답 | 조회와 저장 사이 경쟁 조건을 막지 못함 | 보조 수단 |
 | JVM `synchronized` | 단일 프로세스에서는 단순 | 여러 인스턴스에서 무효 | 미선택 |
 | PostgreSQL `UNIQUE(user_id, role)` | 모든 쓰기 경로의 최종 정합성 | 충돌을 HTTP 계약으로 번역해야 함 | 최종 방어선 |
-| Idempotency-Key | 재시도에 같은 결과 제공 | DB 중복 방지를 대체하지 못함 | 다음 단계 |
+| Idempotency-Key | 재시도에 같은 결과 제공 | DB 중복 방지를 대체하지 못함 | 구현·검증 완료 |
 
 MSA 관점에서는 authorization이 `User` Entity를 직접 관계로 가지지 않고 `userId`만 저장한다. 사용자 존재 여부는 `UserExistencePort`로 확인한다. 지금은 JPA Adapter가 이 Port를 구현하지만, 나중에 user 서비스가 분리되면 HTTP/gRPC Adapter로 바꿀 수 있다.
 
@@ -38,12 +38,13 @@ MSA 관점에서는 authorization이 `User` Entity를 직접 관계로 가지지
 | 저장 성공 | 1건 | 테스트 Future 결과 |
 | UNIQUE 충돌 | 19건 | 실패 요청 집계 |
 | DB에 남은 `ADMIN` 권한 | 1건 | `countByUserIdAndRole()` |
-| 개발 API 재시도 | 첫 요청 `201`, 두 번째 요청 `409 DUPLICATE_ROLE_GRANT` | Docker Compose PostgreSQL + `curl` |
+| 같은 키 동시 재시도 | 최초 `201` 1건, 재전송 `201` 19건 | Testcontainers PostgreSQL 16 |
 
 ```text
 ROLE_GRANT_CONCURRENCY_RESULT total=20 success=1 unique_conflicts=19 persisted=1
+IDEMPOTENCY_CONCURRENCY_RESULT total=20 first_201=1 replayed_201=19 role_grants=1 idempotency_records=1
 ```
 
-## 다음 질문
+## 후속 딥다이브
 
-현재 HTTP API는 중복 요청을 `409`로 처리한다. 하지만 네트워크 재시도라면 최초 성공의 `201` 결과를 같은 Idempotency-Key로 재사용하는 편이 더 나을 수 있다. 다음 딥다이브에서는 이 두 계약을 비교한다.
+같은 `Idempotency-Key`와 같은 본문은 최초 `201`을 재전송하고, 다른 키로 이미 존재하는 권한을 요청할 때만 `409 DUPLICATE_ROLE_GRANT`를 반환한다. 설계와 동시성 검증은 [Idempotency-Key 딥다이브](../deep-dives/idempotency-key.md)에 기록했다.
