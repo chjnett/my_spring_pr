@@ -13,6 +13,8 @@ import java.util.HexFormat;
 public class AuditEventSigner {
 
     private static final String ALGORITHM = "HmacSHA256";
+    public static final int LEGACY_VERSION = 1;
+    public static final int CORRELATION_VERSION = 2;
 
     private final String keyId;
     private final byte[] secret;
@@ -38,7 +40,20 @@ public class AuditEventSigner {
         byte[] signature = newMac().doFinal(canonicalBytes(
                 eventId, aggregateType, aggregateId, eventType, actorId, payload, occurredAt
         ));
-        return new SignedAuditEvent(keyId, HexFormat.of().formatHex(signature));
+        return new SignedAuditEvent(keyId, HexFormat.of().formatHex(signature), LEGACY_VERSION);
+    }
+
+    public SignedAuditEvent signWithCorrelation(
+            String eventId, String aggregateType, String aggregateId, String eventType,
+            Long actorId, String payload, Instant occurredAt, String correlationId
+    ) {
+        byte[] signature = newMac().doFinal(canonicalBytesWithCorrelation(
+                eventId, aggregateType, aggregateId, eventType, actorId, payload,
+                occurredAt, correlationId
+        ));
+        return new SignedAuditEvent(
+                keyId, HexFormat.of().formatHex(signature), CORRELATION_VERSION
+        );
     }
 
     public boolean verify(
@@ -62,6 +77,24 @@ public class AuditEventSigner {
         return keyId.equals(signatureKeyId);
     }
 
+    public boolean verifyWithCorrelation(
+            String signatureKeyId, String expectedSignature, String eventId,
+            String aggregateType, String aggregateId, String eventType, Long actorId,
+            String payload, Instant occurredAt, String correlationId
+    ) {
+        if (!keyId.equals(signatureKeyId)) {
+            return false;
+        }
+        SignedAuditEvent recalculated = signWithCorrelation(
+                eventId, aggregateType, aggregateId, eventType, actorId, payload,
+                occurredAt, correlationId
+        );
+        return java.security.MessageDigest.isEqual(
+                recalculated.signature().getBytes(StandardCharsets.US_ASCII),
+                expectedSignature.getBytes(StandardCharsets.US_ASCII)
+        );
+    }
+
     private Mac newMac() {
         try {
             Mac mac = Mac.getInstance(ALGORITHM);
@@ -76,13 +109,31 @@ public class AuditEventSigner {
             String eventId, String aggregateType, String aggregateId, String eventType,
             Long actorId, String payload, Instant occurredAt
     ) {
-        String canonical = field(eventId)
+        return canonicalValue(
+                eventId, aggregateType, aggregateId, eventType, actorId, payload, occurredAt
+        ).getBytes(StandardCharsets.UTF_8);
+    }
+
+    private String canonicalValue(
+            String eventId, String aggregateType, String aggregateId, String eventType,
+            Long actorId, String payload, Instant occurredAt
+    ) {
+        return field(eventId)
                 + field(aggregateType)
                 + field(aggregateId)
                 + field(eventType)
                 + field(String.valueOf(actorId))
                 + field(payload)
                 + field(occurredAt.toString());
+    }
+
+    private byte[] canonicalBytesWithCorrelation(
+            String eventId, String aggregateType, String aggregateId, String eventType,
+            Long actorId, String payload, Instant occurredAt, String correlationId
+    ) {
+        String canonical = canonicalValue(
+                eventId, aggregateType, aggregateId, eventType, actorId, payload, occurredAt
+        ) + field(correlationId);
         return canonical.getBytes(StandardCharsets.UTF_8);
     }
 
@@ -91,6 +142,6 @@ public class AuditEventSigner {
         return bytes.length + ":" + value;
     }
 
-    public record SignedAuditEvent(String keyId, String signature) {
+    public record SignedAuditEvent(String keyId, String signature, int version) {
     }
 }

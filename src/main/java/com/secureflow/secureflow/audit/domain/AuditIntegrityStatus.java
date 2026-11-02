@@ -4,5 +4,6 @@ public enum AuditIntegrityStatus {
     VALID,
     INVALID,
     UNSIGNED,
-    UNKNOWN_KEY
+    UNKNOWN_KEY,
+    UNKNOWN_VERSION
 }

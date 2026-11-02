@@ -2,6 +2,7 @@ package com.secureflow.secureflow.audit;
 
 import com.secureflow.secureflow.audit.application.AuditOutboxPublisher;
 import com.secureflow.secureflow.audit.application.AuditIntegrityVerifier;
+import com.secureflow.secureflow.audit.application.AuditEventSigner;
 import com.secureflow.secureflow.audit.domain.AuditIntegrityStatus;
 import com.secureflow.secureflow.audit.domain.AuditEventType;
 import com.secureflow.secureflow.audit.domain.AuditOutboxEvent;
@@ -15,11 +16,13 @@ import com.secureflow.secureflow.authorization.domain.RoleGrantRequestStatus;
 import com.secureflow.secureflow.authorization.persistence.RoleGrantRepository;
 import com.secureflow.secureflow.authorization.persistence.RoleGrantRequestRepository;
 import com.secureflow.secureflow.global.exception.DuplicateRoleGrantException;
+import com.secureflow.secureflow.global.observability.CorrelationIdContext;
 import com.secureflow.secureflow.user.User;
 import com.secureflow.secureflow.user.UserRepository;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.testcontainers.service.connection.ServiceConnection;
@@ -173,17 +176,46 @@ class TransactionalOutboxPostgresTest {
     }
 
     @Test
-    void detectsPayloadTamperingAfterEventWasPublished() {
+    void detectsCorrelationAndPayloadTamperingAfterEventWasPublished() {
         TestUsers users = users();
-        accessRequestService.createIdempotently(
-                users.requesterId(),
-                new CreateAccessRequestCommand(users.targetId(), Role.AUDITOR, "무결성 검증"),
-                "integrity-create"
-        );
+        MDC.put(CorrelationIdContext.MDC_KEY, "integration-request-123");
+        try {
+            accessRequestService.createIdempotently(
+                    users.requesterId(),
+                    new CreateAccessRequestCommand(users.targetId(), Role.AUDITOR, "무결성 검증"),
+                    "integrity-create"
+            );
+        } finally {
+            MDC.remove(CorrelationIdContext.MDC_KEY);
+        }
         assertThat(publisher.publishBatch(100)).isEqualTo(1);
 
         String eventId = jdbcTemplate.queryForObject(
                 "select event_id from security_events", String.class
+        );
+        assertThat(integrityVerifier.verifySecurityEvent(eventId))
+                .isEqualTo(AuditIntegrityStatus.VALID);
+        String correlationId = jdbcTemplate.queryForObject(
+                "select correlation_id from security_events where event_id = ?",
+                String.class, eventId
+        );
+        Integer integrityVersion = jdbcTemplate.queryForObject(
+                "select integrity_version from security_events where event_id = ?",
+                Integer.class, eventId
+        );
+        assertThat(correlationId).isEqualTo("integration-request-123");
+        assertThat(integrityVersion).isEqualTo(AuditEventSigner.CORRELATION_VERSION);
+
+        jdbcTemplate.update(
+                "update security_events set correlation_id = ? where event_id = ?",
+                "tampered-request", eventId
+        );
+        assertThat(integrityVerifier.verifySecurityEvent(eventId))
+                .isEqualTo(AuditIntegrityStatus.INVALID);
+
+        jdbcTemplate.update(
+                "update security_events set correlation_id = ? where event_id = ?",
+                "integration-request-123", eventId
         );
         assertThat(integrityVerifier.verifySecurityEvent(eventId))
                 .isEqualTo(AuditIntegrityStatus.VALID);

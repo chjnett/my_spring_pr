@@ -10,6 +10,7 @@
 HTTP Client
     ↓
 Spring Security              HTTP Basic 인증, DB principal, 역할 기반 인가
+CorrelationIdFilter          안전한 요청 ID 생성·검증, 응답 헤더와 MDC 설정
     ↓
 UserController              요청 검증, HTTP 상태 코드와 DTO 경계
     ↓
@@ -87,7 +88,9 @@ PostgreSQL security_events   event_id UNIQUE 후 Outbox PUBLISHED
 10. actor ID는 클라이언트 입력이 아니라 인증 principal에서 가져오고, 검토 API는 `ADMIN/AUDITOR`에만 허용한다.
 11. 비즈니스 변경과 감사 Outbox는 같은 JPA 트랜잭션에 저장하고, 발행은 JDBC 트랜잭션으로 분리한다.
 12. Publisher 재시도 중복은 `security_events.event_id` UNIQUE로 최종 차단한다.
+13. Correlation ID는 추적 정보로만 사용하고, 안전한 형식만 로그·감사 이벤트에 전파한다.
+14. 감사 서명 규칙을 version으로 구분해 새 필드를 서명하면서 과거 이벤트 검증을 유지한다.
 
 ## 다음 확장 경로
 
-권한 요청 상태·멱등성·인증·인가와 Transactional Outbox/HMAC 흐름을 완성했다. 다음 단계에서는 DB 권한, 키 회전, 실패 이벤트 격리와 관측 지표를 보강한 뒤 JDBC 이벤트 수집·검색으로 확장한다.
+권한 요청 상태·멱등성·인증·인가와 Transactional Outbox/HMAC/Correlation 흐름을 완성했다. 다음 단계에서는 DB 권한, 키 회전, 실패 이벤트 격리와 관측 지표를 보강한 뒤 JDBC 이벤트 수집·검색으로 확장한다.

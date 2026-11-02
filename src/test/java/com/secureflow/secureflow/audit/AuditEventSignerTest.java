@@ -36,4 +36,28 @@ class AuditEventSignerTest {
         assertThatThrownBy(() -> new AuditEventSigner("test-v1", "too-short"))
                 .isInstanceOf(IllegalStateException.class);
     }
+
+    @Test
+    void correlationIsPartOfVersionTwoSignature() {
+        AuditEventSigner signer = new AuditEventSigner(
+                "test-v1", "01234567890123456789012345678901"
+        );
+        Instant occurredAt = Instant.parse("2026-11-02T06:00:00Z");
+        AuditEventSigner.SignedAuditEvent signed = signer.signWithCorrelation(
+                "event-2", "RoleGrantRequest", "11", "ACCESS_REQUEST_APPROVED",
+                3L, "{\"role\":\"AUDITOR\"}", occurredAt, "request-abc"
+        );
+
+        assertThat(signed.version()).isEqualTo(AuditEventSigner.CORRELATION_VERSION);
+        assertThat(signer.verifyWithCorrelation(
+                signed.keyId(), signed.signature(), "event-2", "RoleGrantRequest", "11",
+                "ACCESS_REQUEST_APPROVED", 3L, "{\"role\":\"AUDITOR\"}", occurredAt,
+                "request-abc"
+        )).isTrue();
+        assertThat(signer.verifyWithCorrelation(
+                signed.keyId(), signed.signature(), "event-2", "RoleGrantRequest", "11",
+                "ACCESS_REQUEST_APPROVED", 3L, "{\"role\":\"AUDITOR\"}", occurredAt,
+                "request-tampered"
+        )).isFalse();
+    }
 }

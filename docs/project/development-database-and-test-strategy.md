@@ -107,7 +107,8 @@ curl -i -X POST http://localhost:8081/api/users \
 | `IdempotencyKeyConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 같은 키 20건이 최초 결과 한 건을 재사용하는지 |
 | `SecurityAuthenticationIntegrationTest` | Testcontainers PostgreSQL 16 | BCrypt 인증과 MEMBER/ADMIN 역할 인가 |
 | `TransactionalOutboxPostgresTest` | Testcontainers PostgreSQL 16 | Outbox 원자성, 재처리, `SKIP LOCKED`, HMAC 변조 탐지 |
-| `SecureflowApplicationTests` | H2 + Flyway | V1~V6 migration 적용과 JPA schema validation |
+| `CorrelationIdFilterTest` | Servlet mock + MDC | 안전한 헤더 유지, 잘못된 값 교체, ThreadLocal 정리 |
+| `SecureflowApplicationTests` | H2 + Flyway | V1~V7 migration 적용과 JPA schema validation |
 
 Testcontainers 테스트는 Docker를 사용하지만 Compose의 `secureflow-postgres` 컨테이너를 재사용하지 않는다. 테스트 전용 PostgreSQL 컨테이너를 만들고, 테스트가 끝나면 정리한다.
 

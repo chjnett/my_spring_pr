@@ -30,7 +30,8 @@ public class AuditOutboxPublisher {
         }
         List<PendingEvent> events = jdbcTemplate.query("""
                 select id, event_id, aggregate_type, aggregate_id, event_type,
-                       actor_id, payload, created_at, integrity_key_id, integrity_signature
+                       actor_id, payload, created_at, integrity_key_id, integrity_signature,
+                       correlation_id, integrity_version
                 from audit_outbox
                 where status = 'PENDING'
                 order by id
@@ -43,13 +44,15 @@ public class AuditOutboxPublisher {
             jdbcTemplate.update("""
                     insert into security_events
                         (event_id, aggregate_type, aggregate_id, event_type, actor_id,
-                         payload, occurred_at, ingested_at, integrity_key_id, integrity_signature)
-                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                         payload, occurred_at, ingested_at, integrity_key_id, integrity_signature,
+                         correlation_id, integrity_version)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     on conflict (event_id) do nothing
                     """,
                     event.eventId(), event.aggregateType(), event.aggregateId(), event.eventType(),
                     event.actorId(), event.payload(), event.createdAt(), publishedAt,
-                    event.integrityKeyId(), event.integritySignature()
+                    event.integrityKeyId(), event.integritySignature(), event.correlationId(),
+                    event.integrityVersion()
             );
             jdbcTemplate.update("""
                     update audit_outbox
@@ -71,7 +74,9 @@ public class AuditOutboxPublisher {
                 resultSet.getString("payload"),
                 resultSet.getObject("created_at", OffsetDateTime.class),
                 resultSet.getString("integrity_key_id"),
-                resultSet.getString("integrity_signature")
+                resultSet.getString("integrity_signature"),
+                resultSet.getString("correlation_id"),
+                resultSet.getObject("integrity_version", Integer.class)
         );
     }
 
@@ -85,7 +90,9 @@ public class AuditOutboxPublisher {
             String payload,
             OffsetDateTime createdAt,
             String integrityKeyId,
-            String integritySignature
+            String integritySignature,
+            String correlationId,
+            Integer integrityVersion
     ) {
     }
 }

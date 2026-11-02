@@ -55,6 +55,12 @@ public class AuditOutboxEvent {
     @Column(name = "integrity_signature", length = 64)
     private String integritySignature;
 
+    @Column(name = "correlation_id", length = 64)
+    private String correlationId;
+
+    @Column(name = "integrity_version")
+    private Integer integrityVersion;
+
     protected AuditOutboxEvent() {
     }
 
@@ -87,9 +93,13 @@ public class AuditOutboxEvent {
     public Instant getPublishedAt() { return publishedAt; }
     public String getIntegrityKeyId() { return integrityKeyId; }
     public String getIntegritySignature() { return integritySignature; }
+    public String getCorrelationId() { return correlationId; }
+    public Integer getIntegrityVersion() { return integrityVersion; }
 
-    public void sign(String keyId, String signature) {
+    public void sign(String keyId, String signature, String correlationId, int integrityVersion) {
         this.integrityKeyId = keyId;
         this.integritySignature = signature;
+        this.correlationId = correlationId;
+        this.integrityVersion = integrityVersion;
     }
 }

@@ -21,7 +21,8 @@ public class AuditIntegrityVerifier {
     public AuditIntegrityStatus verifySecurityEvent(String eventId) {
         List<StoredAuditEvent> events = jdbcTemplate.query("""
                 select event_id, aggregate_type, aggregate_id, event_type, actor_id,
-                       payload, occurred_at, integrity_key_id, integrity_signature
+                       payload, occurred_at, integrity_key_id, integrity_signature,
+                       correlation_id, integrity_version
                 from security_events
                 where event_id = ?
                 """, (resultSet, rowNumber) -> new StoredAuditEvent(
@@ -29,7 +30,9 @@ public class AuditIntegrityVerifier {
                 resultSet.getString("aggregate_id"), resultSet.getString("event_type"),
                 resultSet.getLong("actor_id"), resultSet.getString("payload"),
                 resultSet.getObject("occurred_at", OffsetDateTime.class),
-                resultSet.getString("integrity_key_id"), resultSet.getString("integrity_signature")
+                resultSet.getString("integrity_key_id"), resultSet.getString("integrity_signature"),
+                resultSet.getString("correlation_id"),
+                resultSet.getObject("integrity_version", Integer.class)
         ), eventId);
 
         if (events.isEmpty()) {
@@ -42,16 +45,31 @@ public class AuditIntegrityVerifier {
         if (!signer.supports(event.keyId())) {
             return AuditIntegrityStatus.UNKNOWN_KEY;
         }
-        return signer.verify(
-                event.keyId(), event.signature(), event.eventId(), event.aggregateType(),
-                event.aggregateId(), event.eventType(), event.actorId(), event.payload(),
-                event.occurredAt().toInstant()
-        ) ? AuditIntegrityStatus.VALID : AuditIntegrityStatus.INVALID;
+        int version = event.integrityVersion() == null
+                ? AuditEventSigner.LEGACY_VERSION : event.integrityVersion();
+        boolean valid;
+        if (version == AuditEventSigner.LEGACY_VERSION) {
+            valid = signer.verify(
+                    event.keyId(), event.signature(), event.eventId(), event.aggregateType(),
+                    event.aggregateId(), event.eventType(), event.actorId(), event.payload(),
+                    event.occurredAt().toInstant()
+            );
+        } else if (version == AuditEventSigner.CORRELATION_VERSION && event.correlationId() != null) {
+            valid = signer.verifyWithCorrelation(
+                    event.keyId(), event.signature(), event.eventId(), event.aggregateType(),
+                    event.aggregateId(), event.eventType(), event.actorId(), event.payload(),
+                    event.occurredAt().toInstant(), event.correlationId()
+            );
+        } else {
+            return AuditIntegrityStatus.UNKNOWN_VERSION;
+        }
+        return valid ? AuditIntegrityStatus.VALID : AuditIntegrityStatus.INVALID;
     }
 
     private record StoredAuditEvent(
             String eventId, String aggregateType, String aggregateId, String eventType,
-            Long actorId, String payload, OffsetDateTime occurredAt, String keyId, String signature
+            Long actorId, String payload, OffsetDateTime occurredAt, String keyId, String signature,
+            String correlationId, Integer integrityVersion
     ) {
     }
 }
