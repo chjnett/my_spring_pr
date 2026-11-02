@@ -22,7 +22,7 @@ public class AuditIntegrityVerifier {
         List<StoredAuditEvent> events = jdbcTemplate.query("""
                 select event_id, aggregate_type, aggregate_id, event_type, actor_id,
                        payload, occurred_at, integrity_key_id, integrity_signature,
-                       correlation_id, integrity_version
+                       correlation_id, integrity_version, source, source_ip, outcome
                 from security_events
                 where event_id = ?
                 """, (resultSet, rowNumber) -> new StoredAuditEvent(
@@ -32,7 +32,8 @@ public class AuditIntegrityVerifier {
                 resultSet.getObject("occurred_at", OffsetDateTime.class),
                 resultSet.getString("integrity_key_id"), resultSet.getString("integrity_signature"),
                 resultSet.getString("correlation_id"),
-                resultSet.getObject("integrity_version", Integer.class)
+                resultSet.getObject("integrity_version", Integer.class),
+                resultSet.getString("source"), resultSet.getString("source_ip"), resultSet.getString("outcome")
         ), eventId);
 
         if (events.isEmpty()) {
@@ -60,6 +61,12 @@ public class AuditIntegrityVerifier {
                     event.aggregateId(), event.eventType(), event.actorId(), event.payload(),
                     event.occurredAt().toInstant(), event.correlationId()
             );
+        } else if (version == AuditEventSigner.SEARCH_FIELDS_VERSION && event.correlationId() != null) {
+            valid = signer.verifyWithSearchFields(
+                    event.keyId(), event.signature(), event.eventId(), event.aggregateType(),
+                    event.aggregateId(), event.eventType(), event.actorId(), event.payload(),
+                    event.occurredAt().toInstant(), event.correlationId(), event.source(), event.sourceIp(), event.outcome()
+            );
         } else {
             return AuditIntegrityStatus.UNKNOWN_VERSION;
         }
@@ -69,7 +76,7 @@ public class AuditIntegrityVerifier {
     private record StoredAuditEvent(
             String eventId, String aggregateType, String aggregateId, String eventType,
             Long actorId, String payload, OffsetDateTime occurredAt, String keyId, String signature,
-            String correlationId, Integer integrityVersion
+            String correlationId, Integer integrityVersion, String source, String sourceIp, String outcome
     ) {
     }
 }

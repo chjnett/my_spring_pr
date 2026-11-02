@@ -7,7 +7,10 @@ import org.springframework.boot.data.jpa.test.autoconfigure.DataJpaTest;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
-@DataJpaTest(properties = "spring.jpa.hibernate.ddl-auto=validate")
+@DataJpaTest(properties = {
+        "spring.jpa.hibernate.ddl-auto=validate",
+        "spring.flyway.target=10"
+})
 class UserDirtyCheckingTest {
 
     @Autowired

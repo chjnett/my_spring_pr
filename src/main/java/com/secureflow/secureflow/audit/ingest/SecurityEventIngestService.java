@@ -63,9 +63,10 @@ public class SecurityEventIngestService {
                 continue;
             }
             SecurityEventNormalizer.NormalizedSecurityEvent event = normalized.event();
-            AuditEventSigner.SignedAuditEvent signature = signer.signWithCorrelation(
+            AuditEventSigner.SignedAuditEvent signature = signer.signWithSearchFields(
                     event.eventId(), "ExternalSecurityEvent", event.eventId(), event.eventType(),
-                    event.actorId(), event.payload(), event.occurredAt(), correlationId
+                    event.actorId(), event.payload(), event.occurredAt(), correlationId,
+                    sourceId, event.sourceIp(), event.outcome()
             );
             prepared.add(new PreparedEvent(index, event, signature));
         }

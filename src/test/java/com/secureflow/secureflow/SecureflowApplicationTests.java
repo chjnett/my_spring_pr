@@ -10,16 +10,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(properties = {
         "spring.datasource.url=jdbc:h2:mem:secureflow;MODE=PostgreSQL;DB_CLOSE_DELAY=-1",
         "spring.datasource.driver-class-name=org.h2.Driver",
-        "spring.jpa.hibernate.ddl-auto=validate"
+        "spring.jpa.hibernate.ddl-auto=validate",
+        "spring.flyway.target=10"
 })
 class SecureflowApplicationTests {
 
-	@Autowired
-	private Flyway flyway;
 
-	@Test
-	void contextLoads() {
-	        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
-	}
+    @Autowired
+    private Flyway flyway;
+
+    @Test
+    void contextLoads() {
+        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
+    }
 
 }

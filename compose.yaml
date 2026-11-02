@@ -5,8 +5,10 @@ services:
     environment:
       DB_HOST: postgres
       DB_PORT: 5432
-      DB_USERNAME: secureflow
+      DB_USERNAME: secureflow_app
       DB_PASSWORD: ${DB_PASSWORD:-devpassword}
+      DB_MIGRATOR_USERNAME: secureflow_migrator
+      DB_MIGRATOR_PASSWORD: ${DB_MIGRATOR_PASSWORD:-dev-migrator-password}
       AUDIT_HMAC_KEY_ID: ${AUDIT_HMAC_KEY_ID:-local-v1}
       AUDIT_HMAC_SECRET: ${AUDIT_HMAC_SECRET:?AUDIT_HMAC_SECRET must be set}
       SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:?SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL must be set}
@@ -32,14 +34,16 @@ services:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: secureflow
-      POSTGRES_USER: secureflow
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
+      POSTGRES_USER: secureflow_migrator
+      POSTGRES_PASSWORD: ${DB_MIGRATOR_PASSWORD:-dev-migrator-password}
+      POSTGRES_APP_PASSWORD: ${DB_PASSWORD:-devpassword}
     ports:
       - "5433:5432"
     volumes:
       - secureflow-postgres:/var/lib/postgresql/data
+      - ./ops/postgres/init-app-role.sh:/docker-entrypoint-initdb.d/10-create-app-role.sh:ro
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U secureflow -d secureflow"]
+      test: ["CMD-SHELL", "pg_isready -U secureflow_migrator -d secureflow"]
       interval: 5s
       timeout: 3s
       retries: 10

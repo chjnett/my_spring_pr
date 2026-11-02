@@ -12,6 +12,8 @@ spring:
     enabled: true
     baseline-on-migrate: true
     baseline-version: 1
+    user: ${DB_MIGRATOR_USERNAME:${DB_USERNAME:secureflow}}
+    password: ${DB_MIGRATOR_PASSWORD:${DB_PASSWORD:devpassword}}
 
   jpa:
     hibernate:
@@ -44,6 +46,7 @@ secureflow:
     integrity:
       key-id: ${AUDIT_HMAC_KEY_ID:local-v1}
       secret: ${AUDIT_HMAC_SECRET}
+      verification-keys: {}
   security-events:
     ingest:
       enabled: ${SECURITY_EVENT_INGEST_ENABLED:false}

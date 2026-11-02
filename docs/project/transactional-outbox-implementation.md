@@ -130,12 +130,13 @@ Flyway V8과 이벤트 단위 트랜잭션으로 poison event가 배치 전체�
 
 ## 현재 보안 한계와 다음 작업
 
-현재 `security_events`는 애플리케이션 코드에서 UPDATE/DELETE 경로를 제공하지 않지만 DB 권한 차원의 append-only 강제는 아직 없다. 다음 단계에서 아래 항목을 이어서 구현한다.
+Compose 운영 경로는 Flyway migrator와 application DB 계정을 분리한다. application 계정은 `security_events`에 `SELECT`, `INSERT`만 가지며 V12 migration이 `UPDATE`, `DELETE`를 회수한다. HMAC key ring은 활성 키로 신규 이벤트를 서명하고 과거 검증 키로 이전 이벤트를 계속 검증한다. 외부 수집 이벤트는 검색 컬럼까지 포함하는 HMAC v3을 사용하고 내부 outbox의 v2 이벤트도 계속 검증한다.
 
-1. 쓰기 전용 DB role 또는 UPDATE/DELETE 차단 정책
-2. 과거 키 검증을 지원하는 key ring/KMS 기반 키 회전
-3. 비동기 Executor와 외부 메시지 경계의 Correlation ID 전파
-4. 운영자 승인·원인 기록을 포함하는 DLQ 재처리 명령
-5. Outbox 최고 지연과 DLQ 발생 Prometheus alert rule
+다음 항목은 여전히 운영 환경에서 보완해야 한다.
 
-따라서 이번 결과를 “완전한 위변조 방지 감사 저장소”라고 표현하지 않는다. 현재 HMAC은 secret을 모르는 DB 변경자의 필드 변조를 탐지하지만 행 삭제, secret 탈취 후 재서명, 애플리케이션 자체의 악의적 기록은 막지 못한다. 현재 보장 범위는 원자성, 이벤트 단위 실패 격리, 제한된 재시도와 DLQ, 동시 Publisher 중복 방지, 저장 후 필드 변조 탐지다.
+1. KMS/Secret Manager에 key ring을 연결하고 실제 회전 훈련 수행
+2. 비동기 Executor와 외부 메시지 경계의 Correlation ID 전파
+3. 운영자 승인·원인 기록을 포함하는 DLQ 재처리 명령
+4. Outbox 최고 지연과 DLQ 발생 Prometheus alert rule
+
+따라서 이번 결과를 “완전한 위변조 방지 감사 저장소”라고 표현하지 않는다. 현재 HMAC과 DB 최소 권한은 secret을 모르는 application 계정의 변경·삭제를 차단하고 서명 필드 변조를 탐지하지만, migrator 권한의 행 삭제, secret 탈취 후 재서명, 애플리케이션 자체의 악의적 기록은 막지 못한다. 현재 보장 범위는 원자성, 이벤트 단위 실패 격리, 제한된 재시도와 DLQ, 동시 Publisher 중복 방지, application 계정 append-only, 저장 후 필드 변조 탐지다.

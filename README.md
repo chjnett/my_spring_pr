@@ -117,3 +117,5 @@ ADMIN 또는 AUDITOR는 `/api/alerts`에서 경보를 조회하고 담당자를 
 ## 백엔드 전체 실행·운영 가이드
 
 Docker 기반 전체 실행, API 데모, Prometheus/Grafana, CI, 100만 건 seed, k6 부하 테스트와 설계 한계는 [백엔드 전체 구현·운영 가이드](docs/project/backend-completion-guide.md)에 한 문서로 정리했다. 프론트엔드를 만들기 전에 이 문서의 API와 운영 흐름을 기준으로 검증하면 된다.
+
+포트폴리오 전체 요약은 [백엔드 포트폴리오 가이드](docs/project/backend-portfolio-guide.md)에서 확인할 수 있습니다.

@@ -1,6 +1,7 @@
 package com.secureflow.secureflow.audit;
 
 import com.secureflow.secureflow.audit.application.AuditIntegrityVerifier;
+import com.secureflow.secureflow.audit.application.AuditEventSigner;
 import com.secureflow.secureflow.audit.domain.AuditIntegrityStatus;
 import com.secureflow.secureflow.audit.ingest.SecurityEventBatchRequest;
 import com.secureflow.secureflow.audit.ingest.SecurityEventBatchResponse;
@@ -54,7 +55,8 @@ class SecurityEventIngestionPostgresTest {
 
     @Container
     @ServiceConnection
-    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine");
+    static PostgreSQLContainer postgres = new PostgreSQLContainer("postgres:16-alpine")
+            .withInitScript("db/init/create-secureflow-app-role.sql");
 
     @Autowired SecurityEventIngestService ingestService;
     @Autowired SecurityEventQueryService queryService;
@@ -101,12 +103,27 @@ class SecurityEventIngestionPostgresTest {
                 "select payload from security_events where event_id = ?", String.class, eventId
         )).contains(injectionText);
         assertThat(integrityVerifier.verifySecurityEvent(eventId)).isEqualTo(AuditIntegrityStatus.VALID);
+        assertThat(jdbcTemplate.queryForObject(
+                "select integrity_version from security_events where event_id = ?", Integer.class, eventId
+        )).isEqualTo(AuditEventSigner.SEARCH_FIELDS_VERSION);
+        jdbcTemplate.update("update security_events set source_ip = ? where event_id = ?", "192.168.1.99", eventId);
+        assertThat(integrityVerifier.verifySecurityEvent(eventId)).isEqualTo(AuditIntegrityStatus.INVALID);
+        jdbcTemplate.update("update security_events set source_ip = ? where event_id = ?", "192.168.1.10", eventId);
+        assertThat(integrityVerifier.verifySecurityEvent(eventId)).isEqualTo(AuditIntegrityStatus.VALID);
         assertThat(meterRegistry.get("secureflow.security.events.ingest")
                 .tag("result", "accepted").counter().count()).isGreaterThanOrEqualTo(1);
         assertThat(meterRegistry.get("secureflow.security.events.ingest")
                 .tag("result", "duplicate").counter().count()).isGreaterThanOrEqualTo(1);
         assertThat(meterRegistry.get("secureflow.security.events.ingest")
                 .tag("result", "rejected").counter().count()).isGreaterThanOrEqualTo(1);
+    }
+
+    @Test
+    void applicationRoleCanAppendButCannotMutateOrDeleteSecurityEvents() {
+        assertThat(tablePrivilege("SELECT")).isTrue();
+        assertThat(tablePrivilege("INSERT")).isTrue();
+        assertThat(tablePrivilege("UPDATE")).isFalse();
+        assertThat(tablePrivilege("DELETE")).isFalse();
     }
 
     @Test
@@ -273,5 +290,13 @@ class SecurityEventIngestionPostgresTest {
         return new SecurityEventItemRequest(
                 eventId, eventType, actorId, sourceIp, outcome, occurredAt, attributes
         );
+    }
+
+    private boolean tablePrivilege(String privilege) {
+        return Boolean.TRUE.equals(jdbcTemplate.queryForObject(
+                "select has_table_privilege('secureflow_app', 'security_events', ?)",
+                Boolean.class,
+                privilege
+        ));
     }
 }

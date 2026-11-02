@@ -8,6 +8,7 @@ import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 public class ServiceCredentialFilter extends OncePerRequestFilter {
 

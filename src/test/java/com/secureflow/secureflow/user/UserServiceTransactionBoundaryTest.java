@@ -22,7 +22,8 @@ import static org.assertj.core.api.Assertions.assertThat;
         "spring.datasource.username=sa",
         "spring.datasource.password=",
         "spring.jpa.hibernate.ddl-auto=validate",
-        "spring.jpa.show-sql=true"
+        "spring.jpa.show-sql=true",
+        "spring.flyway.target=10"
 })
 class UserServiceTransactionBoundaryTest {
 

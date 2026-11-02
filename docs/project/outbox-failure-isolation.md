@@ -80,6 +80,6 @@ Grafana의 `SecureFlow · Transactional Outbox` 대시보드에는 backlog, 최�
 ## 남은 운영 과제
 
 - DLQ 조회·재처리 API는 아직 제공하지 않는다. 재처리는 원인 제거와 운영자 승인 후 별도 명령으로 설계해야 한다.
-- DB role 차원의 `security_events` UPDATE/DELETE 차단이 필요하다.
-- 다중 HMAC 키를 검증하는 key ring과 실제 KMS 연동이 필요하다.
+- Compose에서는 DB role 차원의 `security_events` UPDATE/DELETE 차단을 적용했다. 실제 배포 환경에도 동일한 migrator/application 계정 분리를 적용해야 한다.
+- 다중 HMAC key ring은 구현했으며 실제 KMS/Secret Manager 연동과 회전 훈련이 필요하다.
 - 최고 대기 시간 60초와 DLQ 1건 이상에 대한 Prometheus alert rule을 추가해야 한다.
