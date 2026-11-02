@@ -19,7 +19,7 @@ class SecureflowApplicationTests {
 
 	@Test
 	void contextLoads() {
-	        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("9");
+	        assertThat(flyway.info().current().getVersion().getVersion()).isEqualTo("10");
 	}
 
 }

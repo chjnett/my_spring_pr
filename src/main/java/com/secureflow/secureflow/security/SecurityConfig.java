@@ -30,6 +30,7 @@ public class SecurityConfig {
                         .requestMatchers("/actuator/health", "/actuator/info", "/actuator/prometheus").permitAll()
                         .requestMatchers(HttpMethod.GET, "/api/security-events/**")
                         .hasAnyRole("ADMIN", "AUDITOR")
+                        .requestMatchers("/api/alerts/**").hasAnyRole("ADMIN", "AUDITOR")
                         .requestMatchers(HttpMethod.POST,
                                 "/api/access-requests/*/approve",
                                 "/api/access-requests/*/reject"

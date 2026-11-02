@@ -50,6 +50,11 @@ secureflow:
       source-id: ${SECURITY_EVENT_INGEST_SOURCE_ID:local-service}
       api-key: ${SECURITY_EVENT_INGEST_API_KEY:}
       max-batch-size: ${SECURITY_EVENT_INGEST_MAX_BATCH_SIZE:500}
+  detection:
+    enabled: ${DETECTION_ENABLED:false}
+    fixed-delay: ${DETECTION_FIXED_DELAY:30000}
+    window-size: ${DETECTION_WINDOW_SIZE:10m}
+    ingestion-grace: ${DETECTION_INGESTION_GRACE:30s}
   bootstrap-admin:
     name: ${SECUREFLOW_BOOTSTRAP_ADMIN_NAME:SecureFlow Admin}
     email: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:}

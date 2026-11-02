@@ -97,3 +97,18 @@ curl -i -X POST http://localhost:8081/api/internal/security-events:batch \
 ```
 
 ADMIN 또는 AUDITOR는 `/api/security-events`에서 기간·유형·actor·IP·결과를 조합해 검색할 수 있다. API 계약과 인덱스 검증은 [보안 이벤트 배치 수집·검색 구현 결과](docs/project/security-event-ingestion-search.md), 학습할 개념은 [JDBC 배치 적재와 커서 페이지네이션](docs/study/13-jdbc-batch-and-cursor-pagination.md)에 정리했다.
+
+## 규칙 기반 탐지와 경보
+
+Phase 4 탐지 작업은 기본적으로 비활성화되어 있다. 고정 10분 구간이 완성될 때마다 네 가지 규칙을 JDBC로 집계하려면 다음 설정을 추가한다.
+
+```bash
+DETECTION_ENABLED=true \
+DETECTION_FIXED_DELAY=30000 \
+DETECTION_WINDOW_SIZE=10m \
+DETECTION_INGESTION_GRACE=30s \
+AUDIT_HMAC_SECRET='replace-with-at-least-32-characters' \
+./gradlew bootRun
+```
+
+ADMIN 또는 AUDITOR는 `/api/alerts`에서 경보를 조회하고 담당자를 지정한 뒤 해결할 수 있다. 규칙·상태·동시성 설계는 [규칙 기반 탐지와 경보 워크플로 구현 결과](docs/project/rule-detection-and-alert-workflow.md), 학습할 개념은 [탐지 Window, Watermark와 경보 낙관적 락](docs/study/14-detection-window-watermark-and-optimistic-locking.md)에 정리했다.

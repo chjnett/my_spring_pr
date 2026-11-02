@@ -13,5 +13,6 @@
 | 11 | [Correlation ID와 MDC](11-correlation-id-and-mdc.md) | 요청 추적 ID의 검증·ThreadLocal 정리·감사 이벤트 연결을 설명한다. |
 | 12 | [Outbox 재시도와 Dead Letter](12-outbox-retry-and-dead-letter.md) | 이벤트 단위 트랜잭션·지수 backoff·poison event 격리·운영 메트릭을 설명한다. |
 | 13 | [JDBC 배치 적재와 커서 페이지네이션](13-jdbc-batch-and-cursor-pagination.md) | 부분 성공 batch·prepared statement·복합 커서·실행 계획의 의미를 설명한다. |
+| 14 | [탐지 Window, Watermark와 경보 낙관적 락](14-detection-window-watermark-and-optimistic-locking.md) | event time·반개방 구간·watermark·fingerprint·lost update를 설명한다. |
 
 스터디 문서는 문제 해결 결과를 과장하지 않는다. 구현 전 알아야 할 개념, 실습 범위, 확인 질문을 관리한다.

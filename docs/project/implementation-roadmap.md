@@ -114,6 +114,8 @@
 
 ## Phase 4 — 규칙 기반 탐지와 경보
 
+현재 상태: 네 가지 JDBC 집계 규칙, 고정 window와 watermark, fingerprint 중복 방지, JPA 경보 상태 전이와 낙관적 락, API와 지연 메트릭을 구현했다. sliding window·late event 재처리와 운영 rule 설정은 남아 있다.
+
 ### 구현
 
 - 네 가지 MVP 탐지 규칙과 watermark를 구현한다.
@@ -127,6 +129,19 @@
 - 탐지 작업 재실행 시 경보 중복 없음
 - 동시에 같은 경보를 처리할 때 낙관적 락 충돌 응답
 - 이벤트에서 경보까지 지연 메트릭 확인
+
+### 2026-11-02 구현 결과
+
+- 로그인 실패·다계정 IP 실패·접근 거부·특권 작업 실패 네 규칙 구현
+- `[from, to)` 고정 10분 window, 30초 grace와 성공 후 watermark 전진 구현
+- JDBC GROUP BY/HAVING 결과를 JPA `SecurityAlert` Aggregate로 변환
+- SHA-256 fingerprint UNIQUE와 후보별 트랜잭션으로 재실행 멱등성 확보
+- `OPEN → INVESTIGATING → RESOLVED` 상태 전이와 `@Version` 동시 수정 방어
+- ADMIN/AUDITOR 경보 조회·담당자 할당·해결 API 구현
+- 경보 생성·중복과 이벤트→경보 지연 Micrometer 지표 추가
+- PostgreSQL 임계값·경계·재실행·watermark·API·동시성 통합 테스트 통과
+- Phase 4 반영 후 전체 66개 테스트 통과
+- 상세 근거: [규칙 기반 탐지와 경보 워크플로 구현 결과](rule-detection-and-alert-workflow.md)
 
 ## Phase 5 — 운영 품질과 포트폴리오 패키징
 

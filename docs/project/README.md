@@ -12,6 +12,7 @@
 - [Transactional Outbox 감사 이벤트 구현 결과](transactional-outbox-implementation.md)
 - [Outbox 실패 격리·재시도·Dead Letter 구현 결과](outbox-failure-isolation.md)
 - [보안 이벤트 배치 수집·검색 구현 결과](security-event-ingestion-search.md)
+- [규칙 기반 탐지와 경보 워크플로 구현 결과](rule-detection-and-alert-workflow.md)
 - [2026-11-02 로컬 실동작 검증](live-smoke-test-2026-11-02.md)
 
 기능을 추가하거나 인프라를 바꾸면 먼저 이 문서가 실제 코드와 일치하는지 확인한다.

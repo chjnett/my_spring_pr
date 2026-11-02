@@ -1,6 +1,9 @@
 package com.secureflow.secureflow.global.exception;
 
 import com.secureflow.secureflow.audit.query.SecurityEventQueryException;
+import com.secureflow.secureflow.detection.exception.AlertNotFoundException;
+import com.secureflow.secureflow.detection.exception.AlertConcurrentModificationException;
+import com.secureflow.secureflow.detection.exception.InvalidAlertTransitionException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -14,6 +17,23 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(AlertConcurrentModificationException.class)
+    public ResponseEntity<ErrorResponse> handleAlertConcurrentModification(
+            AlertConcurrentModificationException exception
+    ) {
+        return response(HttpStatus.CONFLICT, "ALERT_CONCURRENTLY_MODIFIED", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(AlertNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAlertNotFound(AlertNotFoundException exception) {
+        return response(HttpStatus.NOT_FOUND, "ALERT_NOT_FOUND", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(InvalidAlertTransitionException.class)
+    public ResponseEntity<ErrorResponse> handleInvalidAlertTransition(InvalidAlertTransitionException exception) {
+        return response(HttpStatus.CONFLICT, "INVALID_ALERT_TRANSITION", exception.getMessage(), Map.of());
+    }
+
     @ExceptionHandler(SecurityEventQueryException.class)
     public ResponseEntity<ErrorResponse> handleSecurityEventQuery(SecurityEventQueryException exception) {
         return response(HttpStatus.BAD_REQUEST, "INVALID_SECURITY_EVENT_QUERY", exception.getMessage(), Map.of());
