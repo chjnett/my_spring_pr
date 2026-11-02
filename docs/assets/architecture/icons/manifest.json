@@ -1,0 +1,56 @@
+{
+  "client": {
+    "source": "lucide",
+    "url": "https://cdn.jsdelivr.net/npm/lucide-static/icons/users.svg",
+    "file": "client.svg",
+    "bytes": 456
+  },
+  "spring": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/spring.svg",
+    "file": "spring.svg",
+    "bytes": 741
+  },
+  "hibernate": {
+    "source": "devicon",
+    "url": "https://raw.githubusercontent.com/devicons/devicon/master/icons/hibernate/hibernate-original.svg",
+    "file": "hibernate.svg",
+    "bytes": 328
+  },
+  "postgresql": {
+    "source": "svgl",
+    "url": "https://svgl.app/library/postgresql.svg",
+    "file": "postgresql.svg",
+    "bytes": 3944
+  },
+  "outbox": {
+    "source": "lucide",
+    "url": "https://cdn.jsdelivr.net/npm/lucide-static/icons/inbox.svg",
+    "file": "outbox.svg",
+    "bytes": 461
+  },
+  "publisher": {
+    "source": "lucide",
+    "url": "https://cdn.jsdelivr.net/npm/lucide-static/icons/send.svg",
+    "file": "publisher.svg",
+    "bytes": 465
+  },
+  "events": {
+    "source": "lucide",
+    "url": "https://cdn.jsdelivr.net/npm/lucide-static/icons/file-lock-2.svg",
+    "file": "events.svg",
+    "bytes": 533
+  },
+  "prometheus": {
+    "source": "devicon",
+    "url": "https://raw.githubusercontent.com/devicons/devicon/master/icons/prometheus/prometheus-original.svg",
+    "file": "prometheus.svg",
+    "bytes": 1223
+  },
+  "grafana": {
+    "source": "devicon",
+    "url": "https://raw.githubusercontent.com/devicons/devicon/master/icons/grafana/grafana-original.svg",
+    "file": "grafana.svg",
+    "bytes": 4958
+  }
+}

@@ -7,6 +7,13 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
 - [포트폴리오 목표 제품·백엔드 아키텍처](docs/project/portfolio-product-architecture.md)
 - [단계별 구현 로드맵](docs/project/implementation-roadmap.md)
 - [대화형 목표 아키텍처 다이어그램](.archify/architecture-secureflow-security-platform-20261102-150735/secureflow-security-platform.html)
+- [코드 근거 기반 현재 아키텍처](.archify/architecture-secureflow-current-20261102-163000/secureflow-current.html)
+
+## 현재 아키텍처
+
+[![SecureFlow 현재 아키텍처](docs/assets/secureflow-architecture.png)](docs/assets/architecture/secureflow-architecture.html)
+
+권한 요청은 Spring Security의 RBAC 검사를 거쳐 JPA 트랜잭션에서 처리된다. 같은 트랜잭션에 감사 Outbox를 남긴 뒤, 별도 JDBC Publisher가 `FOR UPDATE SKIP LOCKED`로 이벤트를 선점해 `security_events`에 멱등 적재한다. 이미지에는 흰색 배경을 고정했고, 클릭하면 `stack-diagram`으로 만든 자체 포함 상세 HTML이 열린다.
 
 ## IntelliJ 시작 방법
 
