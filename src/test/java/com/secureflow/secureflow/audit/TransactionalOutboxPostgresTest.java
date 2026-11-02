@@ -1,6 +1,8 @@
 package com.secureflow.secureflow.audit;
 
 import com.secureflow.secureflow.audit.application.AuditOutboxPublisher;
+import com.secureflow.secureflow.audit.application.AuditIntegrityVerifier;
+import com.secureflow.secureflow.audit.domain.AuditIntegrityStatus;
 import com.secureflow.secureflow.audit.domain.AuditEventType;
 import com.secureflow.secureflow.audit.domain.AuditOutboxEvent;
 import com.secureflow.secureflow.audit.domain.OutboxStatus;
@@ -53,6 +55,7 @@ class TransactionalOutboxPostgresTest {
 
     @Autowired AccessRequestService accessRequestService;
     @Autowired AuditOutboxPublisher publisher;
+    @Autowired AuditIntegrityVerifier integrityVerifier;
     @Autowired AuditOutboxRepository outboxRepository;
     @Autowired RoleGrantRequestRepository requestRepository;
     @Autowired RoleGrantRepository roleGrantRepository;
@@ -167,6 +170,31 @@ class TransactionalOutboxPostgresTest {
         assertThat(securityEventCount).isEqualTo(20);
         assertThat(duplicateCount).isZero();
         assertThat(outboxRepository.countByStatus(OutboxStatus.PUBLISHED)).isEqualTo(20);
+    }
+
+    @Test
+    void detectsPayloadTamperingAfterEventWasPublished() {
+        TestUsers users = users();
+        accessRequestService.createIdempotently(
+                users.requesterId(),
+                new CreateAccessRequestCommand(users.targetId(), Role.AUDITOR, "무결성 검증"),
+                "integrity-create"
+        );
+        assertThat(publisher.publishBatch(100)).isEqualTo(1);
+
+        String eventId = jdbcTemplate.queryForObject(
+                "select event_id from security_events", String.class
+        );
+        assertThat(integrityVerifier.verifySecurityEvent(eventId))
+                .isEqualTo(AuditIntegrityStatus.VALID);
+
+        jdbcTemplate.update(
+                "update security_events set payload = ? where event_id = ?",
+                "{\"tampered\":true}", eventId
+        );
+
+        assertThat(integrityVerifier.verifySecurityEvent(eventId))
+                .isEqualTo(AuditIntegrityStatus.INVALID);
     }
 
     private int publishAfterSignal(CountDownLatch ready, CountDownLatch start) throws Exception {

@@ -90,4 +90,4 @@ PostgreSQL security_events   event_id UNIQUE 후 Outbox PUBLISHED
 
 ## 다음 확장 경로
 
-권한 요청 상태·멱등성·인증·인가와 Transactional Outbox 1차 흐름을 완성했다. 다음 단계에서는 HMAC 무결성, 실패 이벤트 격리와 관측 지표를 보강한 뒤 JDBC 이벤트 수집·검색으로 확장한다.
+권한 요청 상태·멱등성·인증·인가와 Transactional Outbox/HMAC 흐름을 완성했다. 다음 단계에서는 DB 권한, 키 회전, 실패 이벤트 격리와 관측 지표를 보강한 뒤 JDBC 이벤트 수집·검색으로 확장한다.

@@ -93,13 +93,31 @@ JPA는 Aggregate 상태 전이와 dirty checking을 표현하기 좋다. 반면 
 
 1~4는 해당 트랜잭션이 롤백된다. 5는 이미 커밋됐을 수 있으므로 재시도 시 `event_id` 멱등성이 필요하다.
 
+## 7. HMAC으로 변조 탐지하기
+
+HMAC은 비밀키와 이벤트 내용을 함께 계산한 인증 코드다. 저장된 payload나 actor, 발생 시각 중 하나라도 바뀌면 같은 비밀키로 다시 계산한 결과가 기존 서명과 달라진다.
+
+SecureFlow는 문자열을 단순히 `|`로 연결하지 않는다. 값 자체에 `|`가 들어가면 서로 다른 필드 조합이 같은 문자열을 만들 가능성이 있기 때문이다. 각 필드를 UTF-8 바이트 기준 `길이:값`으로 연결한다.
+
+```text
+7:event-19:RoleGrant2:1012:ROLE_GRANTED1:317:{"role":"ADMIN"}20:2026-11-02T06:00:00Z
+```
+
+실제 계산에는 HMAC-SHA256을 사용하고 `key_id`와 64자리 hex 서명을 이벤트에 저장한다. HMAC은 다음을 구분해서 이해해야 한다.
+
+- 탐지 가능: secret을 모르는 DB 변경자가 서명 대상 필드를 수정
+- 탐지 불가: 행 자체 삭제, secret 탈취 후 재서명, 애플리케이션이 처음부터 잘못 기록
+- 제공하지 않음: payload 암호화와 기밀성
+
+키 회전 시 과거 이벤트를 계속 검증하려면 `key_id`로 과거 검증 키를 조회할 수 있어야 한다. 오래된 키는 새 서명에는 쓰지 않되 과거 검증용으로 보관하는 정책이 필요하다.
+
 ## 실습
 
 1. `AuditOutboxPublisher`에서 `SKIP LOCKED`를 제거하고 두 Publisher 동시 테스트의 대기 시간과 처리 분배를 비교한다.
 2. `security_events.event_id` UNIQUE를 제거했을 때 어떤 장애 재현 테스트가 필요한지 작성한다.
 3. 한 이벤트의 JSON을 잘못된 값으로 만들어 현재 배치 전체가 롤백되는지 확인하고 poison event 격리 설계를 제안한다.
 4. `PENDING` 최장 체류 시간을 Micrometer gauge로 표현하되 `event_id`를 tag로 쓰면 안 되는 이유를 설명한다.
-5. payload HMAC을 계산할 canonical JSON 규칙을 설계하고 필드 순서·시간 표현·키 회전 문제를 정리한다.
+5. 현재 길이-prefix canonical 형식과 JSON canonicalization 표준을 비교하고 필드 순서·숫자·시간 표현 차이를 정리한다.
 
 ## 확인 질문
 

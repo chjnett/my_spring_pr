@@ -49,6 +49,12 @@ public class AuditOutboxEvent {
     @Column(name = "published_at")
     private Instant publishedAt;
 
+    @Column(name = "integrity_key_id", length = 50)
+    private String integrityKeyId;
+
+    @Column(name = "integrity_signature", length = 64)
+    private String integritySignature;
+
     protected AuditOutboxEvent() {
     }
 
@@ -79,4 +85,11 @@ public class AuditOutboxEvent {
     public OutboxStatus getStatus() { return status; }
     public Instant getCreatedAt() { return createdAt; }
     public Instant getPublishedAt() { return publishedAt; }
+    public String getIntegrityKeyId() { return integrityKeyId; }
+    public String getIntegritySignature() { return integritySignature; }
+
+    public void sign(String keyId, String signature) {
+        this.integrityKeyId = keyId;
+        this.integritySignature = signature;
+    }
 }

@@ -25,6 +25,7 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
    ```bash
    SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL=admin@example.com \
    SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD='change-this-password' \
+   AUDIT_HMAC_SECRET='replace-with-at-least-32-characters' \
    ./gradlew bootRun
    ```
 
@@ -32,6 +33,8 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
 
    ```bash
    OUTBOX_PUBLISHER_ENABLED=true \
+   AUDIT_HMAC_KEY_ID=local-v1 \
+   AUDIT_HMAC_SECRET='replace-with-at-least-32-characters' \
    SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL=admin@example.com \
    SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD='change-this-password' \
    ./gradlew bootRun

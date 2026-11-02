@@ -74,9 +74,9 @@ PostgreSQL 16 Testcontainers와 실제 Spring Security filter chain으로 다음
 - `MEMBER`의 승인 시도 `403`
 - bootstrap `ADMIN`의 승인 `200`
 - 승인 응답의 reviewer ID가 인증 principal의 user ID와 동일
-- Flyway V1~V5와 Hibernate schema validation 통과
+- Flyway V1~V6와 Hibernate schema validation 통과
 
-2026-11-02 최신 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **45개 테스트 통과, 실패 0개**다.
+2026-11-02 최신 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **48개 테스트 통과, 실패 0개**다.
 
 ## 현재 선택의 한계
 

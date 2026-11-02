@@ -4,7 +4,7 @@
 
 권한 요청 생성·승인·거절과 직접 역할 부여가 성공할 때 감사 이벤트를 같은 데이터베이스 트랜잭션의 `audit_outbox`에 저장하도록 구현했다. 별도 JDBC Publisher는 PostgreSQL의 `FOR UPDATE SKIP LOCKED`로 미발행 행을 선점하고, `security_events` 적재와 Outbox 완료 표시를 다시 하나의 트랜잭션으로 처리한다.
 
-이 구조로 비즈니스 변경만 커밋되고 감사 로그가 사라지는 dual-write 문제를 피한다. 2026-11-02 실제 PostgreSQL 16 통합 테스트에서 동시 Publisher 2개가 20건을 처리한 결과는 `claimed=20, events=20, duplicates=0`이었다. 전체 회귀 테스트는 45개 모두 통과했다.
+이 구조로 비즈니스 변경만 커밋되고 감사 로그가 사라지는 dual-write 문제를 피한다. 각 이벤트는 HMAC-SHA256으로 서명해 저장 후 payload 변조도 탐지한다. 2026-11-02 실제 PostgreSQL 16 통합 테스트에서 동시 Publisher 2개가 20건을 처리한 결과는 `claimed=20, events=20, duplicates=0`이었다. 전체 회귀 테스트는 48개 모두 통과했다.
 
 ## 해결하려는 실패
 
@@ -36,12 +36,13 @@ AuditOutboxPublisher @Transactional
 
 ## 구현 범위
 
-### Flyway V5
+### Flyway V5~V6
 
 - `audit_outbox`: 발행 대기 이벤트와 `PENDING/PUBLISHED` 상태를 저장한다.
 - `security_events`: 발행이 완료된 보안 이벤트를 저장한다.
 - 두 테이블 모두 `event_id`에 UNIQUE 제약을 둔다.
 - Outbox 조회는 `(status, id)`, 이벤트 검색은 `(event_type, occurred_at)`와 `(actor_id, occurred_at)` 인덱스를 사용한다.
+- V6는 두 테이블에 `integrity_key_id`, `integrity_signature`를 추가한다. 기존 V5 데이터와의 migration 호환성을 위해 nullable이며, 새 애플리케이션 이벤트는 항상 서명한다.
 
 ### 기록되는 이벤트
 
@@ -74,10 +75,25 @@ Publisher는 기본적으로 꺼져 있다. 개발·운영 PostgreSQL에서 다�
 ```bash
 OUTBOX_PUBLISHER_ENABLED=true \
 OUTBOX_PUBLISHER_FIXED_DELAY=1000 \
+AUDIT_HMAC_KEY_ID=production-v1 \
+AUDIT_HMAC_SECRET='32자-이상의-별도-비밀값' \
 ./gradlew bootRun
 ```
 
 H2 기반 테스트가 PostgreSQL 전용 SQL을 실행하지 않도록 기본값을 `false`로 두었다.
+
+## HMAC 무결성
+
+`AuditEventSigner`는 다음 필드를 UTF-8 바이트 길이와 값으로 연결한 canonical byte sequence에 HMAC-SHA256을 계산한다.
+
+- `event_id`, `aggregate_type`, `aggregate_id`, `event_type`
+- `actor_id`, JSON `payload`, UTC `occurred_at`
+
+단순 구분자 연결 대신 `byteLength:value` 형식을 사용해 값 안에 구분자가 들어가도 필드 경계가 모호해지지 않는다. 검증 시에는 timing 차이를 줄이기 위해 `MessageDigest.isEqual`로 서명 바이트를 비교한다.
+
+`AuditIntegrityVerifier`의 결과는 `VALID`, `INVALID`, `UNSIGNED`, `UNKNOWN_KEY`로 구분한다. 키 ID를 함께 저장하므로 어떤 키로 서명했는지는 알 수 있지만, 현재 구현은 실행 중인 단일 키만 검증한다. 실제 운영의 키 회전은 과거 키를 읽기 전용 key ring 또는 KMS에서 조회하도록 확장해야 한다.
+
+애플리케이션은 `AUDIT_HMAC_SECRET`이 없거나 32자 미만이면 시작을 거부한다. 테스트 전용 공개값은 `src/test/resources`에만 두며, 개발·배포 secret은 저장소에 커밋하지 않는다. 배포 환경에서는 Secret Manager/KMS에서 주입하고 DB 계정과 분리해야 한다. HMAC은 암호화가 아니므로 payload 기밀성을 제공하지 않는다.
 
 ## 검증 결과
 
@@ -87,7 +103,9 @@ H2 기반 테스트가 PostgreSQL 전용 SQL을 실행하지 않도록 기본값
 | Publisher 재실행 | 최초 2건, 다음 실행 0건; 최종 이벤트 2건 |
 | 승인 중 역할 중복 오류 | 요청 상태 `PENDING` 유지, 승인 Outbox 0건 |
 | Publisher 2개 동시 실행 | 대기 20건, 선점 합계 20건, 이벤트 20건, 중복 0건 |
-| 전체 회귀 | 45 tests, 0 failures, 0 errors |
+| 정상 이벤트 무결성 | HMAC 검증 `VALID` |
+| DB에서 payload 직접 변조 | HMAC 검증 `INVALID` |
+| 전체 회귀 | 48 tests, 0 failures, 0 errors |
 
 검증 클래스는 `TransactionalOutboxPostgresTest`이며 Testcontainers PostgreSQL 16에서 실행한다.
 
@@ -95,10 +113,10 @@ H2 기반 테스트가 PostgreSQL 전용 SQL을 실행하지 않도록 기본값
 
 현재 `security_events`는 애플리케이션 코드에서 UPDATE/DELETE 경로를 제공하지 않지만 DB 권한 차원의 append-only 강제는 아직 없다. 다음 단계에서 아래 항목을 이어서 구현한다.
 
-1. 이벤트 canonical payload와 HMAC 서명·검증
-2. 쓰기 전용 DB role 또는 UPDATE/DELETE 차단 정책
+1. 쓰기 전용 DB role 또는 UPDATE/DELETE 차단 정책
+2. 과거 키 검증을 지원하는 key ring/KMS 기반 키 회전
 3. 실패 횟수, `FAILED` 상태, poison event 격리와 DLQ
 4. Outbox backlog·최고 지연·발행 성공/실패 메트릭
 5. Correlation ID 전파와 구조화 로그
 
-따라서 이번 결과를 “완전한 위변조 방지 감사 저장소”라고 표현하지 않는다. 현재 보장 범위는 비즈니스 변경과 Outbox 생성의 원자성, 발행 재시도, 동시 Publisher 중복 방지다.
+따라서 이번 결과를 “완전한 위변조 방지 감사 저장소”라고 표현하지 않는다. 현재 HMAC은 secret을 모르는 DB 변경자의 필드 변조를 탐지하지만 행 삭제, secret 탈취 후 재서명, 애플리케이션 자체의 악의적 기록은 막지 못한다. 현재 보장 범위는 원자성, 발행 재시도, 동시 Publisher 중복 방지와 저장 후 필드 변조 탐지다.

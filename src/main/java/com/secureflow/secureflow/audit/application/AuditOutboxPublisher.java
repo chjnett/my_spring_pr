@@ -30,7 +30,7 @@ public class AuditOutboxPublisher {
         }
         List<PendingEvent> events = jdbcTemplate.query("""
                 select id, event_id, aggregate_type, aggregate_id, event_type,
-                       actor_id, payload, created_at
+                       actor_id, payload, created_at, integrity_key_id, integrity_signature
                 from audit_outbox
                 where status = 'PENDING'
                 order by id
@@ -43,12 +43,13 @@ public class AuditOutboxPublisher {
             jdbcTemplate.update("""
                     insert into security_events
                         (event_id, aggregate_type, aggregate_id, event_type, actor_id,
-                         payload, occurred_at, ingested_at)
-                    values (?, ?, ?, ?, ?, ?, ?, ?)
+                         payload, occurred_at, ingested_at, integrity_key_id, integrity_signature)
+                    values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                     on conflict (event_id) do nothing
                     """,
                     event.eventId(), event.aggregateType(), event.aggregateId(), event.eventType(),
-                    event.actorId(), event.payload(), event.createdAt(), publishedAt
+                    event.actorId(), event.payload(), event.createdAt(), publishedAt,
+                    event.integrityKeyId(), event.integritySignature()
             );
             jdbcTemplate.update("""
                     update audit_outbox
@@ -68,7 +69,9 @@ public class AuditOutboxPublisher {
                 resultSet.getString("event_type"),
                 resultSet.getLong("actor_id"),
                 resultSet.getString("payload"),
-                resultSet.getObject("created_at", OffsetDateTime.class)
+                resultSet.getObject("created_at", OffsetDateTime.class),
+                resultSet.getString("integrity_key_id"),
+                resultSet.getString("integrity_signature")
         );
     }
 
@@ -80,7 +83,9 @@ public class AuditOutboxPublisher {
             String eventType,
             Long actorId,
             String payload,
-            OffsetDateTime createdAt
+            OffsetDateTime createdAt,
+            String integrityKeyId,
+            String integritySignature
     ) {
     }
 }

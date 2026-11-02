@@ -11,10 +11,16 @@ public class AuditEventRecorder {
 
     private final AuditOutboxRepository outboxRepository;
     private final ObjectMapper objectMapper;
+    private final AuditEventSigner signer;
 
-    public AuditEventRecorder(AuditOutboxRepository outboxRepository, ObjectMapper objectMapper) {
+    public AuditEventRecorder(
+            AuditOutboxRepository outboxRepository,
+            ObjectMapper objectMapper,
+            AuditEventSigner signer
+    ) {
         this.outboxRepository = outboxRepository;
         this.objectMapper = objectMapper;
+        this.signer = signer;
     }
 
     public void record(
@@ -25,8 +31,14 @@ public class AuditEventRecorder {
             Object payload
     ) {
         String payloadJson = objectMapper.writeValueAsString(payload);
-        outboxRepository.save(new AuditOutboxEvent(
+        AuditOutboxEvent event = new AuditOutboxEvent(
                 aggregateType, String.valueOf(aggregateId), eventType, actorId, payloadJson
-        ));
+        );
+        AuditEventSigner.SignedAuditEvent signature = signer.sign(
+                event.getEventId(), event.getAggregateType(), event.getAggregateId(),
+                event.getEventType().name(), event.getActorId(), event.getPayload(), event.getCreatedAt()
+        );
+        event.sign(signature.keyId(), signature.signature());
+        outboxRepository.save(event);
     }
 }

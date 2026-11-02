@@ -50,7 +50,7 @@
 
 ## Phase 2 — Transactional Outbox 감사 로그
 
-현재 상태: 비즈니스 트랜잭션의 Outbox 기록, JDBC Publisher, 동시 선점과 `event_id` 중복 방지까지 구현했다. HMAC·DB 권한 기반 append-only 강제·실패 격리·Correlation ID는 남아 있다.
+현재 상태: 비즈니스 트랜잭션의 Outbox 기록, JDBC Publisher, 동시 선점, `event_id` 중복 방지와 HMAC 변조 탐지까지 구현했다. DB 권한 기반 append-only 강제·키 회전·실패 격리·Correlation ID는 남아 있다.
 
 ### 구현
 
@@ -73,7 +73,8 @@
 - PostgreSQL `FOR UPDATE SKIP LOCKED` 기반 JDBC Publisher 구현
 - Publisher 2개가 대기 이벤트 20건 처리: 선점 합계 20, 저장 20, 중복 0
 - 역할 부여 실패 시 승인 상태와 승인 Outbox가 함께 롤백됨을 검증
-- 전체 45개 테스트 통과
+- Flyway V6와 HMAC-SHA256 서명 추가, 정상 이벤트 `VALID`와 payload 변조 `INVALID` 검증
+- 전체 48개 테스트 통과
 - 상세 근거: [Transactional Outbox 감사 이벤트 구현 결과](transactional-outbox-implementation.md)
 
 ## Phase 3 — JDBC 이벤트 수집·검색

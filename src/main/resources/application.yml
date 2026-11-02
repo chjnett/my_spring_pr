@@ -36,6 +36,10 @@ management:
       application: ${spring.application.name}
 
 secureflow:
+  audit:
+    integrity:
+      key-id: ${AUDIT_HMAC_KEY_ID:local-v1}
+      secret: ${AUDIT_HMAC_SECRET}
   bootstrap-admin:
     name: ${SECUREFLOW_BOOTSTRAP_ADMIN_NAME:SecureFlow Admin}
     email: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:}
