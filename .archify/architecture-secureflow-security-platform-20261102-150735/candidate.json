@@ -1,0 +1,295 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "SecureFlow 목표 백엔드 아키텍처",
+    "locale": "ko",
+    "output": ".archify/architecture-secureflow-security-platform-20261102-150735/secureflow-security-platform.html",
+    "quality_profile": "showcase",
+    "views": [
+      {
+        "id": "access-audit",
+        "label": "권한 변경 감사",
+        "focus": ["security-admin", "access-api", "business-store", "outbox-store", "outbox-publisher", "event-store"],
+        "note": "JPA 트랜잭션에서 Outbox를 만들고 JDBC Publisher가 감사 이벤트로 발행한다."
+      },
+      {
+        "id": "detect-alert",
+        "label": "탐지와 경보",
+        "focus": ["event-store", "detection-engine", "rule-alert-store", "alert-api", "security-analyst"],
+        "note": "JDBC 시간 구간 집계 결과를 JPA 경보 Aggregate로 관리한다."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "security-admin",
+      "type": "external",
+      "label": "보안 담당자",
+      "sublabel": "권한 승인 · 경보 조사",
+      "pos": [40, 150],
+      "size": [150, 66],
+      "icon": "person"
+    },
+    {
+      "id": "source-system",
+      "type": "external",
+      "label": "신뢰된 시스템",
+      "sublabel": "로그인 · 접근 이벤트",
+      "pos": [40, 405],
+      "size": [150, 66]
+    },
+    {
+      "id": "security-analyst",
+      "type": "external",
+      "label": "보안 분석가",
+      "sublabel": "경보 조사 · 상태 처리",
+      "pos": [788, 15],
+      "size": [150, 60],
+      "icon": "person"
+    },
+    {
+      "id": "access-api",
+      "type": "backend",
+      "label": "Identity & Access API",
+      "sublabel": "JPA · 요청/승인/권한",
+      "pos": [265, 110],
+      "size": [175, 72],
+      "tag": "상태 전이 + @Version"
+    },
+    {
+      "id": "outbox-publisher",
+      "type": "backend",
+      "label": "Audit Outbox Publisher",
+      "sublabel": "JDBC · 선점/재시도",
+      "pos": [520, 110],
+      "size": [175, 72],
+      "tag": "SKIP LOCKED"
+    },
+    {
+      "id": "alert-api",
+      "type": "backend",
+      "label": "Security Alert API",
+      "sublabel": "JPA · 할당/상태 전이",
+      "pos": [775, 110],
+      "size": [175, 72],
+      "tag": "낙관적 락"
+    },
+    {
+      "id": "ingest-api",
+      "type": "security",
+      "label": "Security Event Ingest",
+      "sublabel": "JDBC batch · 입력 검증",
+      "pos": [265, 370],
+      "size": [175, 72],
+      "tag": "Prepared Statement"
+    },
+    {
+      "id": "detection-engine",
+      "type": "security",
+      "label": "Detection Engine",
+      "sublabel": "JDBC · 시간 구간 집계",
+      "pos": [520, 370],
+      "size": [175, 72],
+      "tag": "규칙 기반"
+    },
+    {
+      "id": "app-observability",
+      "type": "backend",
+      "label": "Actuator & Micrometer",
+      "sublabel": "지연 · 실패 · 처리량",
+      "pos": [775, 370],
+      "size": [175, 72]
+    },
+    {
+      "id": "business-store",
+      "type": "database",
+      "label": "Business Schema",
+      "sublabel": "users · requests · grants",
+      "pos": [1030, 70],
+      "size": [165, 66],
+      "tag": "JPA 소유"
+    },
+    {
+      "id": "outbox-store",
+      "type": "messagebus",
+      "label": "Audit Outbox",
+      "sublabel": "PENDING · PUBLISHED · FAILED",
+      "pos": [1030, 220],
+      "size": [165, 72],
+      "tag": "JPA 기록 / JDBC 발행"
+    },
+    {
+      "id": "event-store",
+      "type": "database",
+      "label": "Security Event Store",
+      "sublabel": "append-only · JSONB · HMAC",
+      "pos": [1030, 370],
+      "size": [165, 72],
+      "tag": "JDBC 소유"
+    },
+    {
+      "id": "rule-alert-store",
+      "type": "database",
+      "label": "Rules & Alerts",
+      "sublabel": "rules · alerts · watermark",
+      "pos": [1030, 520],
+      "size": [165, 66],
+      "tag": "JPA 소유"
+    },
+    {
+      "id": "prometheus",
+      "type": "cloud",
+      "label": "Prometheus",
+      "sublabel": "메트릭 수집",
+      "pos": [775, 625],
+      "size": [150, 60]
+    },
+    {
+      "id": "grafana",
+      "type": "frontend",
+      "label": "Grafana",
+      "sublabel": "운영 대시보드",
+      "pos": [1030, 625],
+      "size": [150, 60]
+    }
+  ],
+  "boundaries": [
+    {
+      "kind": "region",
+      "label": "Spring Boot Modular Monolith",
+      "wraps": ["access-api", "outbox-publisher", "alert-api", "ingest-api", "detection-engine", "app-observability"],
+      "pad": 26
+    },
+    {
+      "kind": "region",
+      "label": "PostgreSQL 16",
+      "wraps": ["business-store", "outbox-store", "event-store", "rule-alert-store"],
+      "pad": 22
+    }
+  ],
+  "connections": [
+    {
+      "id": "admin-access",
+      "from": "security-admin",
+      "to": "access-api",
+      "label": "권한 요청 · 승인",
+      "variant": "security"
+    },
+    {
+      "id": "admin-alert",
+      "from": "security-analyst",
+      "to": "alert-api",
+      "label": "경보 조사",
+      "variant": "security"
+    },
+    {
+      "id": "source-ingest",
+      "from": "source-system",
+      "to": "ingest-api",
+      "label": "인증된 이벤트 배치",
+      "variant": "security"
+    },
+    {
+      "id": "access-business",
+      "from": "access-api",
+      "to": "business-store",
+      "label": "JPA 상태 변경",
+      "variant": "emphasis"
+    },
+    {
+      "id": "access-outbox",
+      "from": "access-api",
+      "to": "outbox-store",
+      "label": "같은 트랜잭션",
+      "variant": "emphasis"
+    },
+    {
+      "id": "publisher-claim",
+      "from": "outbox-publisher",
+      "to": "outbox-store",
+      "label": "JDBC 선점",
+      "variant": "dashed"
+    },
+    {
+      "id": "publisher-append",
+      "from": "outbox-publisher",
+      "to": "event-store",
+      "label": "멱등 batch append",
+      "variant": "security"
+    },
+    {
+      "id": "ingest-append",
+      "from": "ingest-api",
+      "to": "event-store",
+      "label": "Prepared batch insert",
+      "variant": "security"
+    },
+    {
+      "id": "detect-query",
+      "from": "detection-engine",
+      "to": "event-store",
+      "label": "시간 구간 SQL",
+      "variant": "security"
+    },
+    {
+      "id": "detect-alerts",
+      "from": "detection-engine",
+      "to": "rule-alert-store",
+      "label": "규칙 조회 · 경보 생성",
+      "variant": "emphasis"
+    },
+    {
+      "id": "alert-store",
+      "from": "alert-api",
+      "to": "rule-alert-store",
+      "label": "조회 · 상태 변경",
+      "variant": "emphasis"
+    },
+    {
+      "id": "publisher-metrics",
+      "from": "outbox-publisher",
+      "to": "app-observability",
+      "label": "lag · retry",
+      "variant": "dashed"
+    },
+    {
+      "id": "detection-metrics",
+      "from": "detection-engine",
+      "to": "app-observability",
+      "label": "match · latency",
+      "variant": "dashed"
+    },
+    {
+      "id": "prometheus-scrape",
+      "from": "prometheus",
+      "to": "app-observability",
+      "label": "scrape /actuator/prometheus",
+      "variant": "dashed"
+    },
+    {
+      "id": "grafana-query",
+      "from": "grafana",
+      "to": "prometheus",
+      "label": "PromQL",
+      "variant": "default"
+    }
+  ],
+  "cards": [
+    {
+      "dot": "emerald",
+      "title": "JPA 경계",
+      "items": ["비즈니스 Aggregate와 상태 전이", "일반 CRUD · @Version · 동일 트랜잭션 Outbox"]
+    },
+    {
+      "dot": "cyan",
+      "title": "JDBC 경계",
+      "items": ["대량 이벤트 적재 · 검색 · 시간 구간 집계", "Prepared Statement · SKIP LOCKED · 실행 계획"]
+    },
+    {
+      "dot": "rose",
+      "title": "보안 불변조건",
+      "items": ["민감정보 최소화와 append-only 권한", "event_id · alert fingerprint로 재처리 멱등성"]
+    }
+  ]
+}

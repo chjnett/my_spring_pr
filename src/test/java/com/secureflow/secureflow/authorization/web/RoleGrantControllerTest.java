@@ -1,0 +1,94 @@
+package com.secureflow.secureflow.authorization.web;
+
+import com.secureflow.secureflow.authorization.application.GrantedRole;
+import com.secureflow.secureflow.authorization.application.IdempotentGrantedRole;
+import com.secureflow.secureflow.authorization.application.RoleGrantService;
+import com.secureflow.secureflow.authorization.domain.Role;
+import com.secureflow.secureflow.global.exception.DuplicateRoleGrantException;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+import com.secureflow.secureflow.security.SecureFlowPrincipal;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.when;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.authentication;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(RoleGrantController.class)
+class RoleGrantControllerTest {
+
+    @Autowired
+    private MockMvc mockMvc;
+
+    @MockitoBean
+    private RoleGrantService roleGrantService;
+
+    @Test
+    void returns201WhenRoleIsGranted() throws Exception {
+        when(roleGrantService.grantRoleIdempotently(any(), any(), any(), any()))
+                .thenReturn(new IdempotentGrantedRole(new GrantedRole(1L, 10L, Role.ADMIN), false));
+
+        mockMvc.perform(post("/api/users/10/role-grants")
+                        .with(authentication(admin()))
+                        .principal(admin())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "first-request")
+                        .content("""
+                                {"role":"ADMIN"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").value(1))
+                .andExpect(jsonPath("$.userId").value(10))
+                .andExpect(jsonPath("$.role").value("ADMIN"));
+    }
+
+    @Test
+    void returns409WhenRoleWasAlreadyGranted() throws Exception {
+        when(roleGrantService.grantRoleIdempotently(any(), any(), any(), any()))
+                .thenThrow(new DuplicateRoleGrantException(10L, Role.ADMIN));
+
+        mockMvc.perform(post("/api/users/10/role-grants")
+                        .with(authentication(admin()))
+                        .principal(admin())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "new-duplicate-request")
+                        .content("""
+                                {"role":"ADMIN"}
+                                """))
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.code").value("DUPLICATE_ROLE_GRANT"));
+    }
+
+    @Test
+    void returnsSaved201ResultWhenRequestIsReplayed() throws Exception {
+        when(roleGrantService.grantRoleIdempotently(any(), any(), any(), any()))
+                .thenReturn(new IdempotentGrantedRole(new GrantedRole(1L, 10L, Role.ADMIN), true));
+
+        mockMvc.perform(post("/api/users/10/role-grants")
+                        .with(authentication(admin()))
+                        .principal(admin())
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .header("Idempotency-Key", "retry-of-first-request")
+                        .content("""
+                                {"role":"ADMIN"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(header().string("Idempotency-Replayed", "true"))
+                .andExpect(jsonPath("$.id").value(1));
+    }
+
+    private UsernamePasswordAuthenticationToken admin() {
+        var authorities = java.util.List.of(new SimpleGrantedAuthority("ROLE_ADMIN"));
+        var principal = new SecureFlowPrincipal(99L, "admin@example.com", "hash", authorities);
+        return new UsernamePasswordAuthenticationToken(principal, null, authorities);
+    }
+}

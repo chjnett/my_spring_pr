@@ -23,6 +23,19 @@ IntelliJ / bootRun → localhost:8081 → PostgreSQL container (localhost:5433)
 | 빠른 테스트 | Mock/H2 | Service와 JPA 기본 동작을 빠르게 확인한다. |
 | PostgreSQL 통합 테스트 | Testcontainers | UNIQUE 제약, SQLState, 동시성처럼 H2로는 믿기 어려운 동작을 실제 PostgreSQL에서 검증한다. |
 | 데이터 초기화 | 테스트 컨테이너 단위 | 테스트가 개발 데이터에 의존하거나 개발 데이터를 지우지 않게 한다. |
+| 스키마 변경 | Flyway migration | 개발·테스트 환경이 같은 버전의 DDL을 순서대로 적용한다. |
+| JPA 스키마 정책 | `ddl-auto=validate` | Hibernate가 테이블을 임의로 수정하지 않고 Entity 매핑과 migration 결과의 불일치를 기동 시점에 막는다. |
+
+## 스키마 관리 원칙
+
+스키마의 기준은 `src/main/resources/db/migration` 아래의 Flyway SQL이다. Entity를 먼저 바꾸고 Hibernate 자동 DDL에 의존하지 않는다.
+
+1. 테이블·컬럼·인덱스 변경은 다음 버전 migration으로 추가한다.
+2. 적용된 migration 파일은 수정하지 않는다.
+3. JPA Entity를 migration 결과에 맞춘다.
+4. H2 컨텍스트 테스트와 Testcontainers PostgreSQL 테스트에서 모두 `validate`를 통과시킨다.
+
+기존 개발 DB처럼 Flyway 도입 전에 Hibernate가 만든 테이블이 존재하면 `baseline-on-migrate=true`, `baseline-version=1`로 현재 구조를 기준선으로 등록한다. 빈 DB에서는 `V1__create_initial_schema.sql`이 전체 초기 스키마를 생성한다.
 
 ## 시작 순서
 
@@ -54,10 +67,10 @@ jdbc:postgresql://localhost:5433/secureflow
 IntelliJ에서 `SecureflowApplication`을 실행하거나 터미널에서 실행한다.
 
 ```bash
-./gradlew bootRun
+AUDIT_HMAC_SECRET='replace-with-at-least-32-characters' ./gradlew bootRun
 ```
 
-로그에 Hikari pool 시작과 Hibernate SQL이 보이면 연결을 확인할 수 있다. 애플리케이션 포트는 `8081`이다.
+로그에 Flyway migration 성공, Hikari pool 시작, Hibernate schema validation이 보이면 연결을 확인할 수 있다. 애플리케이션 포트는 `8081`이다.
 
 ### 3. 실제 API를 한 번 검증
 
@@ -66,7 +79,7 @@ IntelliJ에서 `SecureflowApplication`을 실행하거나 터미널에서 실행
 ```bash
 curl -i -X POST http://localhost:8081/api/users \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com"}'
+  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com","password":"secure-password-123"}'
 ```
 
 기대 결과는 `201 Created`다. 같은 이메일로 다시 요청하면 `409`와 `DUPLICATE_EMAIL` 계약을 확인한다.
@@ -74,7 +87,7 @@ curl -i -X POST http://localhost:8081/api/users \
 ```bash
 curl -i -X POST http://localhost:8081/api/users \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com"}'
+  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com","password":"secure-password-123"}'
 ```
 
 ## 자동 테스트는 개발 DB를 사용하지 않는다
@@ -90,6 +103,12 @@ curl -i -X POST http://localhost:8081/api/users \
 | `UserServiceTest` | Mockito | 중복 이메일 예외 변환, Repository 호출 계약 |
 | `UserDirtyCheckingTest` | H2 + `@DataJpaTest` | managed/detached Entity와 변경 감지 |
 | `DuplicateEmailConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 동시 가입 20건에서 UNIQUE 제약이 한 건만 저장하는지 |
+| `RoleGrantConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 동일 권한 동시 부여를 DB 제약이 한 건으로 제한하는지 |
+| `IdempotencyKeyConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 같은 키 20건이 최초 결과 한 건을 재사용하는지 |
+| `SecurityAuthenticationIntegrationTest` | Testcontainers PostgreSQL 16 | BCrypt 인증과 MEMBER/ADMIN 역할 인가 |
+| `TransactionalOutboxPostgresTest` | Testcontainers PostgreSQL 16 | Outbox 원자성, 재처리, `SKIP LOCKED`, HMAC 변조 탐지 |
+| `CorrelationIdFilterTest` | Servlet mock + MDC | 안전한 헤더 유지, 잘못된 값 교체, ThreadLocal 정리 |
+| `SecureflowApplicationTests` | H2 + Flyway | V1~V7 migration 적용과 JPA schema validation |
 
 Testcontainers 테스트는 Docker를 사용하지만 Compose의 `secureflow-postgres` 컨테이너를 재사용하지 않는다. 테스트 전용 PostgreSQL 컨테이너를 만들고, 테스트가 끝나면 정리한다.
 
@@ -108,6 +127,7 @@ Testcontainers 테스트는 Docker를 사용하지만 Compose의 `secureflow-pos
 - [ ] 사용자 생성 요청이 개발용 PostgreSQL에 저장된다.
 - [ ] 같은 이메일 요청은 `409 DUPLICATE_EMAIL`을 반환한다.
 - [ ] `./gradlew test`가 통과한다.
+- [ ] Flyway V1 적용 후 JPA schema validation이 통과한다.
 - [ ] Testcontainers 동시성 테스트 결과가 `total=20, success=1, unique_conflicts=19, persisted=1`이다.
 
 ## 다음 딥다이브

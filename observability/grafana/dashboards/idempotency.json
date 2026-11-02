@@ -1,0 +1,56 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "최초 201 생성",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "sum(secureflow_idempotency_requests_total{outcome=\"created\"}) or vector(0)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "201 재전송",
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "sum(secureflow_idempotency_requests_total{outcome=\"replayed\"}) or vector(0)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "처리 중 요청",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "sum(secureflow_idempotency_requests_total{outcome=\"in_progress\"}) or vector(0)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "키 재사용 오류",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "sum(secureflow_idempotency_requests_total{outcome=\"key_reused\"}) or vector(0)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "새 요청 중복 충돌",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 7 },
+      "targets": [{ "expr": "sum(secureflow_idempotency_requests_total{outcome=\"duplicate_role_grant\"}) or vector(0)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "timeseries",
+      "title": "멱등성 요청 결과 추이",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 14 },
+      "targets": [{ "expr": "sum by (outcome) (increase(secureflow_idempotency_requests_total[$__rate_interval]))", "legendFormat": "{{outcome}}", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } }
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": ["secureflow", "idempotency", "study"],
+  "templating": { "list": [] },
+  "time": { "from": "now-15m", "to": "now" },
+  "title": "SecureFlow · Idempotency Key",
+  "uid": "secureflow-idempotency",
+  "version": 2
+}

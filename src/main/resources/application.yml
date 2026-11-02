@@ -8,9 +8,14 @@ spring:
     password: ${DB_PASSWORD:devpassword}
     driver-class-name: org.postgresql.Driver
 
+  flyway:
+    enabled: true
+    baseline-on-migrate: true
+    baseline-version: 1
+
   jpa:
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
 
     show-sql: true
 
@@ -20,3 +25,30 @@ spring:
 
 server:
   port: 8081
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,prometheus
+  metrics:
+    tags:
+      application: ${spring.application.name}
+
+logging:
+  pattern:
+    level: "%5p [correlationId=%X{correlationId:-}]"
+
+secureflow:
+  audit:
+    integrity:
+      key-id: ${AUDIT_HMAC_KEY_ID:local-v1}
+      secret: ${AUDIT_HMAC_SECRET}
+  bootstrap-admin:
+    name: ${SECUREFLOW_BOOTSTRAP_ADMIN_NAME:SecureFlow Admin}
+    email: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD:}
+  outbox:
+    publisher:
+      enabled: ${OUTBOX_PUBLISHER_ENABLED:false}
+      fixed-delay: ${OUTBOX_PUBLISHER_FIXED_DELAY:1000}

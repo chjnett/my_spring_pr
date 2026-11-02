@@ -1,0 +1,162 @@
+{
+  "schema_version": 1,
+  "diagram_type": "architecture",
+  "meta": {
+    "title": "SecureFlow 현재 구현 아키텍처",
+    "subtitle": "JPA 비즈니스 트랜잭션과 JDBC 감사 이벤트 파이프라인",
+    "locale": "ko",
+    "output": ".archify/architecture-secureflow-current-20261102-163000/secureflow-current.html",
+    "animation": "trace",
+    "visual_preset": "signal-flow",
+    "quality_profile": "showcase",
+    "viewBox": [1240, 760],
+    "repository": {
+      "url": "https://github.com/chjnett/my_spring_pr.git",
+      "provider": "github",
+      "link_mode": "web",
+      "revision": "7abc987f6a3f45843451413e151229753f83ca24"
+    },
+    "views": [
+      {
+        "id": "request_path",
+        "label": "요청·승인 경로",
+        "focus": ["client", "correlation", "security", "workflow", "jpa", "business_db"],
+        "note": "인증·인가 후 JPA 트랜잭션에서 권한 요청과 감사 Outbox를 함께 기록합니다."
+      },
+      {
+        "id": "audit_path",
+        "label": "감사 이벤트 경로",
+        "focus": ["outbox", "publisher", "security_events"],
+        "note": "JDBC Publisher가 SKIP LOCKED로 선점하고 event_id 고유키로 중복 적재를 방지합니다."
+      },
+      {
+        "id": "observability",
+        "label": "관측 경로",
+        "focus": ["correlation", "prometheus", "grafana"],
+        "note": "Actuator 메트릭을 Prometheus가 수집하고 Grafana가 시각화합니다."
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "client",
+      "type": "external",
+      "label": "사용자 · 관리자",
+      "sublabel": "HTTP client",
+      "pos": [30, 280],
+      "size": [130, 64],
+      "sources": [{"path": "src/main/java/com/secureflow/secureflow/authorization/web/AccessRequestController.java", "line": 1, "label": "권한 요청 API"}]
+    },
+    {
+      "id": "correlation",
+      "type": "backend",
+      "label": "Correlation Filter",
+      "sublabel": "X-Correlation-ID · MDC",
+      "pos": [210, 280],
+      "size": [145, 64],
+      "sources": [{"path": "src/main/java/com/secureflow/secureflow/global/observability/CorrelationIdFilter.java", "line": 17, "end_line": 50, "label": "요청 추적 필터"}]
+    },
+    {
+      "id": "security",
+      "type": "security",
+      "label": "Spring Security",
+      "sublabel": "Basic Auth · RBAC",
+      "pos": [405, 280],
+      "size": [145, 64],
+      "sources": [{"path": "src/main/java/com/secureflow/secureflow/security/SecurityConfig.java", "line": 13, "end_line": 43, "label": "보안 정책"}]
+    },
+    {
+      "id": "workflow",
+      "type": "backend",
+      "label": "권한 승인 워크플로",
+      "sublabel": "멱등성 · 낙관적 잠금",
+      "pos": [600, 280],
+      "size": [155, 64],
+      "sources": [{"path": "src/main/java/com/secureflow/secureflow/authorization/application/AccessRequestService.java", "line": 47, "end_line": 120, "label": "승인 트랜잭션"}]
+    },
+    {
+      "id": "jpa",
+      "type": "backend",
+      "label": "JPA / Hibernate",
+      "sublabel": "도메인 상태 변경",
+      "pos": [805, 200],
+      "size": [145, 64],
+      "sources": [{"path": "build.gradle", "line": 20, "end_line": 37, "label": "JPA 의존성"}]
+    },
+    {
+      "id": "business_db",
+      "type": "database",
+      "label": "비즈니스 데이터",
+      "sublabel": "users · grants · requests",
+      "pos": [1050, 180],
+      "size": [155, 70],
+      "sources": [{"path": "src/main/resources/db/migration/V2__create_role_grant_requests.sql", "line": 1, "label": "권한 테이블"}]
+    },
+    {
+      "id": "outbox",
+      "type": "messagebus",
+      "label": "audit_outbox",
+      "sublabel": "PENDING → PUBLISHED",
+      "pos": [1050, 360],
+      "size": [155, 70],
+      "sources": [{"path": "src/main/resources/db/migration/V5__create_audit_outbox_and_security_events.sql", "line": 1, "end_line": 18, "label": "Outbox 스키마"}]
+    },
+    {
+      "id": "publisher",
+      "type": "backend",
+      "label": "JDBC Publisher",
+      "sublabel": "FOR UPDATE SKIP LOCKED",
+      "pos": [805, 440],
+      "size": [155, 70],
+      "sources": [{"path": "src/main/java/com/secureflow/secureflow/audit/application/AuditOutboxPublisher.java", "line": 22, "end_line": 63, "label": "Outbox 발행"}]
+    },
+    {
+      "id": "security_events",
+      "type": "database",
+      "label": "security_events",
+      "sublabel": "HMAC v2 · event_id UNIQUE",
+      "pos": [1050, 540],
+      "size": [155, 70],
+      "sources": [{"path": "src/main/resources/db/migration/V5__create_audit_outbox_and_security_events.sql", "line": 20, "end_line": 34, "label": "보안 이벤트 스키마"}]
+    },
+    {
+      "id": "prometheus",
+      "type": "cloud",
+      "label": "Prometheus",
+      "sublabel": "metrics scrape :9090",
+      "pos": [600, 570],
+      "size": [145, 64],
+      "sources": [{"path": "compose.yaml", "line": 19, "end_line": 27, "label": "Prometheus 서비스"}]
+    },
+    {
+      "id": "grafana",
+      "type": "cloud",
+      "label": "Grafana",
+      "sublabel": "운영 시각화 :3001",
+      "pos": [805, 570],
+      "size": [145, 64],
+      "sources": [{"path": "compose.yaml", "line": 29, "end_line": 42, "label": "Grafana 서비스"}]
+    }
+  ],
+  "boundaries": [
+    {"kind": "region", "label": "SecureFlow 애플리케이션", "wraps": ["correlation", "security", "workflow", "jpa", "publisher"], "pad": 28},
+    {"kind": "region", "label": "PostgreSQL 16", "wraps": ["business_db", "outbox", "security_events"], "pad": 26}
+  ],
+  "connections": [
+    {"id": "client_request", "from": "client", "to": "correlation", "label": "HTTPS", "variant": "emphasis"},
+    {"id": "correlate", "from": "correlation", "to": "security", "label": "filter", "variant": "emphasis"},
+    {"id": "authorize", "from": "security", "to": "workflow", "label": "RBAC", "variant": "security"},
+    {"id": "domain_write", "from": "workflow", "to": "jpa", "label": "command", "variant": "emphasis", "fromSide": "right", "toSide": "left"},
+    {"id": "jpa_sql", "from": "jpa", "to": "business_db", "label": "JPA SQL"},
+    {"id": "same_tx", "from": "workflow", "to": "outbox", "label": "same transaction", "fromSide": "right", "toSide": "left", "via": [[905, 312], [905, 395]]},
+    {"id": "claim", "from": "outbox", "to": "publisher", "label": "SKIP LOCKED", "fromSide": "left", "toSide": "right"},
+    {"id": "publish", "from": "publisher", "to": "security_events", "label": "INSERT once", "fromSide": "right", "toSide": "left", "via": [[975, 475], [975, 575]]},
+    {"id": "scrape", "from": "correlation", "to": "prometheus", "label": "/actuator/prometheus", "variant": "dashed", "fromSide": "bottom", "toSide": "left", "via": [[282.5, 520], [560, 520], [560, 602]]},
+    {"id": "dashboard", "from": "prometheus", "to": "grafana", "label": "PromQL"}
+  ],
+  "cards": [
+    {"dot": "emerald", "title": "비즈니스 트랜잭션", "items": ["권한 요청·승인·역할 부여는 JPA로 일관성 있게 처리", "감사 Outbox도 같은 트랜잭션에서 기록"]},
+    {"dot": "amber", "title": "보안 이벤트 파이프라인", "items": ["JDBC SKIP LOCKED로 다중 Publisher 경쟁을 제어", "event_id UNIQUE와 HMAC v2로 중복·변조를 탐지"]},
+    {"dot": "cyan", "title": "관측성", "items": ["Correlation ID를 응답·로그·감사 이벤트로 전파", "Prometheus와 Grafana로 운영 지표 확인"]}
+  ]
+}

@@ -1,0 +1,5 @@
+secureflow:
+  audit:
+    integrity:
+      key-id: test-v1
+      secret: test-only-audit-hmac-secret-32-characters

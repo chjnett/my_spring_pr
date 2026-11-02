@@ -5,10 +5,16 @@ import com.secureflow.secureflow.global.exception.UserNotFoundException;
 import com.secureflow.secureflow.user.dto.CreateUserRequest;
 import com.secureflow.secureflow.user.dto.UpdateUserRequest;
 import com.secureflow.secureflow.user.dto.UserResponse;
+import com.secureflow.secureflow.authorization.domain.Role;
+import com.secureflow.secureflow.authorization.domain.RoleGrant;
+import com.secureflow.secureflow.authorization.persistence.RoleGrantRepository;
+import com.secureflow.secureflow.security.UserCredential;
+import com.secureflow.secureflow.security.UserCredentialRepository;
 
 import jakarta.validation.Valid;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.sql.SQLException;
@@ -17,9 +23,20 @@ import java.util.List;
 @Service
 public class UserService {
     private final UserRepository userRepository;
+    private final UserCredentialRepository credentialRepository;
+    private final RoleGrantRepository roleGrantRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository) {
+    public UserService(
+            UserRepository userRepository,
+            UserCredentialRepository credentialRepository,
+            RoleGrantRepository roleGrantRepository,
+            PasswordEncoder passwordEncoder
+    ) {
         this.userRepository = userRepository;
+        this.credentialRepository = credentialRepository;
+        this.roleGrantRepository = roleGrantRepository;
+        this.passwordEncoder = passwordEncoder;
 
     }
 
@@ -37,6 +54,10 @@ public class UserService {
         try {
             // flush 시점에 UNIQUE 위반을 관찰해야 API 계약으로 번역할 수 있다.
             User savedUser = userRepository.saveAndFlush(user);
+            credentialRepository.save(new UserCredential(
+                    savedUser.getId(), passwordEncoder.encode(request.password())
+            ));
+            roleGrantRepository.save(new RoleGrant(savedUser.getId(), Role.MEMBER));
             return toResponse(savedUser);
         } catch (DataIntegrityViolationException exception) {
             if (isDuplicateEmailConstraint(exception)) {

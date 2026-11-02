@@ -32,7 +32,7 @@ class UserControllerTest {
         mockMvc.perform(post("/api/users")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"race","email":"race@example.com"}
+                                {"name":"race","email":"race@example.com","password":"secure-password-123"}
                                 """))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))

@@ -1,13 +1,16 @@
-# SecureFlow 현재 아키텍처와 기술 스택
+# SecureFlow 현재 구현 아키텍처와 기술 스택
 
 ## 프로젝트 목적
 
-SecureFlow는 Spring Boot에서 사용자·권한·데이터 정합성 문제를 단계적으로 실습하는 프로젝트다. 목표는 CRUD를 많이 만드는 것이 아니라, 트랜잭션과 데이터베이스 제약이 실제로 어떤 실패를 막는지 테스트로 증명하는 것이다.
+이 문서는 현재 구현된 기준선을 설명한다. 최종 제품 방향과 JPA/JDBC 경계는 [포트폴리오 목표 제품·백엔드 아키텍처](portfolio-product-architecture.md)를 따른다. 현재 단계의 목표는 CRUD 개수를 늘리는 것이 아니라, 트랜잭션과 데이터베이스 제약이 실제로 어떤 실패를 막는지 테스트로 증명하는 것이다.
 
 ## 현재 구조
 
 ```text
 HTTP Client
+    ↓
+Spring Security              HTTP Basic 인증, DB principal, 역할 기반 인가
+CorrelationIdFilter          안전한 요청 ID 생성·검증, 응답 헤더와 MDC 설정
     ↓
 UserController              요청 검증, HTTP 상태 코드와 DTO 경계
     ↓
@@ -16,6 +19,34 @@ UserService (@Transactional) 유스케이스, 중복 오류를 도메인 오류�
 UserRepository               JPA 조회·저장
     ↓
 PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
+
+RoleGrantController          권한 부여 HTTP 계약
+    ↓
+RoleGrantService             권한 부여·Idempotency-Key 유스케이스와 트랜잭션
+    ↓
+IdempotencyRecordRepository  같은 네트워크 작업의 원자적 선점·응답 재사용
+    ↓
+UserExistencePort            user 모듈에 요구하는 최소 조회 계약
+    ↓
+UserJpaExistenceAdapter      현재는 UserRepository로 계약을 구현
+    ↓
+RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
+
+AccessRequestController       권한 요청·승인·거절 HTTP 계약
+    ↓
+AccessRequestService          상태 전이와 역할 부여의 단일 트랜잭션
+    ↓
+RoleGrantRequest (@Version)   PENDING → APPROVED/REJECTED, 동시 수정 감지
+    ↓
+RoleGrantRequestRepository → PostgreSQL role_grant_requests
+
+Business Service (@Transactional)
+    ├─ JPA Aggregate 변경
+    └─ AuditEventRecorder → PostgreSQL audit_outbox(PENDING)
+                                  ↓
+AuditOutboxPublisher (JDBC)  FOR UPDATE SKIP LOCKED로 작업 선점
+                                  ↓
+PostgreSQL security_events   event_id UNIQUE 후 Outbox PUBLISHED
 ```
 
 ## 기술 스택
@@ -24,7 +55,9 @@ PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
 | --- | --- | --- |
 | Language | Java 21 | 애플리케이션 언어 |
 | Framework | Spring Boot 4.1 | Web MVC, Validation, JPA 실행 환경 |
+| Security | Spring Security, BCrypt | DB 인증 principal과 역할 기반 접근 제어 |
 | Persistence | Spring Data JPA / Hibernate | Entity 관리와 변경 감지 |
+| Audit publishing | Spring JDBC | PostgreSQL 행 잠금 선점과 보안 이벤트 적재 |
 | Development DB | PostgreSQL 16 Docker Compose | IntelliJ에서 API를 직접 확인하는 영속 환경 |
 | Fast test | JUnit 5, Mockito, H2 | 빠른 단위·JPA 테스트 |
 | Integration test | Testcontainers PostgreSQL 16 | 실제 PostgreSQL 제약·동시성 검증 |
@@ -36,6 +69,10 @@ PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
 | --- | --- | --- |
 | `POST /api/users` | `201 Created` | 잘못된 입력 `400`, 중복 이메일 `409 DUPLICATE_EMAIL` |
 | `PATCH /api/users/{id}` | `200 OK` | 없는 사용자 `404 USER_NOT_FOUND`, 잘못된 이름 `400` |
+| `POST /api/users/{userId}/role-grants` | `201 Created` | `Idempotency-Key` 재사용 본문 불일치 `422`, 새 키의 같은 권한 `409` |
+| `POST /api/access-requests` | `201 Created` | 없는 사용자 `404`, 키 재사용 본문 불일치 `422` |
+| `POST /api/access-requests/{id}/approve` | `200 OK` | 자기 승인 `403`, 재처리·동시 수정 `409` |
+| `POST /api/access-requests/{id}/reject` | `200 OK` | 자기 검토 `403`, 재처리·동시 수정 `409` |
 
 ## 설계 원칙
 
@@ -44,7 +81,16 @@ PostgreSQL                   users.email UNIQUE로 최종 정합성 보장
 3. Entity는 자신의 상태 변경 메서드로 불변 조건을 드러낸다.
 4. 사전 조회는 사용자 친화적 오류를 위한 보조 수단이고, 최종 중복 방지는 DB 제약이 맡는다.
 5. 테스트는 개발용 Compose DB를 공유하지 않는다.
+6. 모듈 경계를 넘을 때는 다른 모듈의 Entity가 아니라 ID와 Port 계약을 사용한다.
+7. 멱등성 키는 `UNIQUE(user_id, request_scope, idempotency_key)`로 먼저 선점하고, 권한 변경과 최초 응답 기록을 하나의 트랜잭션으로 완료한다.
+8. 검토가 필요한 상태 전이는 `@Version`으로 경쟁을 감지하고, 요청 UPDATE를 flush한 뒤 역할을 저장한다.
+9. 권한 요청 생성은 API scope별 멱등성 키를 원자적으로 선점하고 최초 `PENDING` 응답을 재생한다.
+10. actor ID는 클라이언트 입력이 아니라 인증 principal에서 가져오고, 검토 API는 `ADMIN/AUDITOR`에만 허용한다.
+11. 비즈니스 변경과 감사 Outbox는 같은 JPA 트랜잭션에 저장하고, 발행은 JDBC 트랜잭션으로 분리한다.
+12. Publisher 재시도 중복은 `security_events.event_id` UNIQUE로 최종 차단한다.
+13. Correlation ID는 추적 정보로만 사용하고, 안전한 형식만 로그·감사 이벤트에 전파한다.
+14. 감사 서명 규칙을 version으로 구분해 새 필드를 서명하면서 과거 이벤트 검증을 유지한다.
 
 ## 다음 확장 경로
 
-`RoleGrant`를 별도 Entity로 추가하고, `UNIQUE(user_id, role)`로 동일 권한의 동시 부여를 막는다. 이 기능은 멱등성 키와 낙관적 락을 비교하는 다음 사례 연구의 기반이 된다.
+권한 요청 상태·멱등성·인증·인가와 Transactional Outbox/HMAC/Correlation 흐름을 완성했다. 다음 단계에서는 DB 권한, 키 회전, 실패 이벤트 격리와 관측 지표를 보강한 뒤 JDBC 이벤트 수집·검색으로 확장한다.
