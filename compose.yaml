@@ -1,10 +1,39 @@
 services:
+  secureflow:
+    build:
+      context: .
+    environment:
+      DB_HOST: postgres
+      DB_PORT: 5432
+      DB_USERNAME: secureflow
+      DB_PASSWORD: ${DB_PASSWORD:-devpassword}
+      AUDIT_HMAC_KEY_ID: ${AUDIT_HMAC_KEY_ID:-local-v1}
+      AUDIT_HMAC_SECRET: ${AUDIT_HMAC_SECRET:?AUDIT_HMAC_SECRET must be set}
+      SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:?SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL must be set}
+      SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD: ${SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD:?SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD must be set}
+      OUTBOX_PUBLISHER_ENABLED: ${OUTBOX_PUBLISHER_ENABLED:-true}
+      SECURITY_EVENT_INGEST_ENABLED: ${SECURITY_EVENT_INGEST_ENABLED:-true}
+      SECURITY_EVENT_INGEST_SOURCE_ID: ${SECURITY_EVENT_INGEST_SOURCE_ID:-local-service}
+      SECURITY_EVENT_INGEST_API_KEY: ${SECURITY_EVENT_INGEST_API_KEY:?SECURITY_EVENT_INGEST_API_KEY must be set}
+      DETECTION_ENABLED: ${DETECTION_ENABLED:-true}
+    ports:
+      - "8081:8081"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep -q 'UP'"]
+      interval: 10s
+      timeout: 3s
+      retries: 12
+      start_period: 30s
+
   postgres:
     image: postgres:16-alpine
     environment:
       POSTGRES_DB: secureflow
       POSTGRES_USER: secureflow
-      POSTGRES_PASSWORD: devpassword
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-devpassword}
     ports:
       - "5433:5432"
     volumes:
@@ -23,8 +52,9 @@ services:
     volumes:
       - ./observability/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
+    depends_on:
+      secureflow:
+        condition: service_healthy
 
   grafana:
     image: grafana/grafana:13.2.1

@@ -8,7 +8,7 @@ SecureFlow는 기능 구현 기록을 쌓는 프로젝트가 아니다. 권한 �
 | --- | --- | --- |
 | [스터디](study/README.md) | Spring Boot·JPA·HTTP의 기본 개념과 체크리스트 | [Spring Boot 기본기](study/01-spring-boot-basics.md) |
 | [딥다이브](deep-dives/README.md) | 하나의 질문을 가설·실험·SQL 관찰로 파고들기 | [JPA 변경 감지](deep-dives/jpa-dirty-checking.md) |
-| [프로젝트](project/README.md) | 현재 구조, 포트폴리오 목표 아키텍처, 구현 로드맵 | [목표 제품 아키텍처](project/portfolio-product-architecture.md) |
+| [프로젝트](project/README.md) | 현재 구조, 포트폴리오 목표 아키텍처, 구현 로드맵 | [백엔드 전체 구현·운영 가이드](project/backend-completion-guide.md) |
 | [문제 백로그](problems/README.md) | 아직 해결하지 않은 문제 후보와 검증 가설 | [현재 문제 후보](problems/problem-backlog.md) |
 | [사례 연구](case-studies/README.md) | PAAR로 정리한 문제 해결과 검증 수치 | [동시 가입과 UNIQUE](case-studies/concurrent-signup-unique-constraint.md) |
 | [트러블슈팅](troubleshooting/README.md) | 시행착오를 포함한 원본 장애 기록 | [포트 충돌 기록](troubleshooting/2026-10-27-postgresql-port-conflict.md) |

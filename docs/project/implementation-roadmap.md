@@ -145,6 +145,8 @@
 
 ## Phase 5 — 운영 품질과 포트폴리오 패키징
 
+현재 상태: 컨테이너 기반 전체 실행, Prometheus/Grafana 보안 파이프라인 지표, GitHub Actions 테스트·이미지 빌드·CodeQL, 100만 건 seed와 k6 수집·검색 시나리오, 백엔드 통합 가이드를 구현했다. 실제 환경에서의 부하 수치와 SLO는 seed를 실행해 기록해야 한다.
+
 ### 구현
 
 - Prometheus/Grafana에 Outbox, ingest, detection, alert 패널을 추가한다.
@@ -159,6 +161,15 @@
 - 전체 CI 통과 배지
 - 수집 처리량, 검색 p50/p95/p99, 탐지 지연 수치
 - 장애 시나리오와 복구 결과가 포함된 사례 연구 3개
+
+### 2026-11-02 구현 결과
+
+- Docker multi-stage image와 app·PostgreSQL·Prometheus·Grafana Compose 실행 구성
+- 수집 result, 검색 latency/result size, 경보 workflow, event-to-alert latency 메트릭 추가
+- Grafana Security Pipeline 대시보드 provisioning 추가
+- GitHub Actions 전체 테스트·컨테이너 빌드 및 CodeQL workflow 추가
+- 100만 건까지 조절 가능한 Node seed와 k6 수집·검색 시나리오 추가
+- [백엔드 전체 구현·운영 가이드](backend-completion-guide.md)로 실행·API·관측·부하·한계 통합 정리
 
 ## 권장 커밋 단위
 

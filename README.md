@@ -8,6 +8,7 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
 - [단계별 구현 로드맵](docs/project/implementation-roadmap.md)
 - [대화형 목표 아키텍처 다이어그램](.archify/architecture-secureflow-security-platform-20261102-150735/secureflow-security-platform.html)
 - [코드 근거 기반 현재 아키텍처](.archify/architecture-secureflow-current-20261102-163000/secureflow-current.html)
+- [백엔드 전체 구현·운영 가이드](docs/project/backend-completion-guide.md)
 
 ## 현재 아키텍처
 
@@ -112,3 +113,7 @@ AUDIT_HMAC_SECRET='replace-with-at-least-32-characters' \
 ```
 
 ADMIN 또는 AUDITOR는 `/api/alerts`에서 경보를 조회하고 담당자를 지정한 뒤 해결할 수 있다. 규칙·상태·동시성 설계는 [규칙 기반 탐지와 경보 워크플로 구현 결과](docs/project/rule-detection-and-alert-workflow.md), 학습할 개념은 [탐지 Window, Watermark와 경보 낙관적 락](docs/study/14-detection-window-watermark-and-optimistic-locking.md)에 정리했다.
+
+## 백엔드 전체 실행·운영 가이드
+
+Docker 기반 전체 실행, API 데모, Prometheus/Grafana, CI, 100만 건 seed, k6 부하 테스트와 설계 한계는 [백엔드 전체 구현·운영 가이드](docs/project/backend-completion-guide.md)에 한 문서로 정리했다. 프론트엔드를 만들기 전에 이 문서의 API와 운영 흐름을 기준으로 검증하면 된다.

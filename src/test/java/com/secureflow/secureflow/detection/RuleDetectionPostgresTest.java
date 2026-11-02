@@ -178,6 +178,10 @@ class RuleDetectionPostgresTest {
                         .content("{\"resolutionNote\":\"사용자 확인 후 계정 보호 완료\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("RESOLVED"));
+        assertThat(meterRegistry.get("secureflow.alert.workflow")
+                .tag("action", "assigned").counter().count()).isGreaterThanOrEqualTo(1);
+        assertThat(meterRegistry.get("secureflow.alert.workflow")
+                .tag("action", "resolved").counter().count()).isGreaterThanOrEqualTo(1);
     }
 
     @Test

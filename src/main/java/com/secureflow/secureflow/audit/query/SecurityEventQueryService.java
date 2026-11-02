@@ -35,20 +35,38 @@ public class SecurityEventQueryService {
     private final SecurityEventCursorCodec cursorCodec;
     private final SecurityEventNormalizer normalizer;
     private final ObjectMapper objectMapper;
+    private final SecurityEventQueryMetrics metrics;
 
     public SecurityEventQueryService(
             JdbcTemplate jdbcTemplate,
             SecurityEventCursorCodec cursorCodec,
             SecurityEventNormalizer normalizer,
-            ObjectMapper objectMapper
+            ObjectMapper objectMapper,
+            SecurityEventQueryMetrics metrics
     ) {
         this.jdbcClient = JdbcClient.create(jdbcTemplate);
         this.cursorCodec = cursorCodec;
         this.normalizer = normalizer;
         this.objectMapper = objectMapper;
+        this.metrics = metrics;
     }
 
     public SecurityEventPage search(
+            Instant from,
+            Instant to,
+            String eventType,
+            Long actorId,
+            String sourceIp,
+            String outcome,
+            Integer requestedSize,
+            String cursor
+    ) {
+        return metrics.record(() -> doSearch(
+                from, to, eventType, actorId, sourceIp, outcome, requestedSize, cursor
+        ));
+    }
+
+    private SecurityEventPage doSearch(
             Instant from,
             Instant to,
             String eventType,

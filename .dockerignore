@@ -1,0 +1,12 @@
+.git
+.gradle
+.idea
+build
+frontend
+spring
+untitled
+untitled1
+docs
+observability
+loadtest
+*.iml

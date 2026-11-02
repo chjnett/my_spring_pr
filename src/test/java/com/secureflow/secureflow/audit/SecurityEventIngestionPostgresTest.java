@@ -11,6 +11,7 @@ import com.secureflow.secureflow.audit.query.SecurityEventPage;
 import com.secureflow.secureflow.audit.query.SecurityEventQueryException;
 import com.secureflow.secureflow.audit.query.SecurityEventQueryService;
 import com.secureflow.secureflow.security.BootstrapAdminService;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,6 +61,7 @@ class SecurityEventIngestionPostgresTest {
     @Autowired JdbcTemplate jdbcTemplate;
     @Autowired MockMvc mockMvc;
     @Autowired BootstrapAdminService bootstrapAdminService;
+    @Autowired MeterRegistry meterRegistry;
 
     @BeforeEach
     void cleanDatabase() {
@@ -97,6 +99,12 @@ class SecurityEventIngestionPostgresTest {
                 "select payload from security_events where event_id = ?", String.class, eventId
         )).contains(injectionText);
         assertThat(integrityVerifier.verifySecurityEvent(eventId)).isEqualTo(AuditIntegrityStatus.VALID);
+        assertThat(meterRegistry.get("secureflow.security.events.ingest")
+                .tag("result", "accepted").counter().count()).isGreaterThanOrEqualTo(1);
+        assertThat(meterRegistry.get("secureflow.security.events.ingest")
+                .tag("result", "duplicate").counter().count()).isGreaterThanOrEqualTo(1);
+        assertThat(meterRegistry.get("secureflow.security.events.ingest")
+                .tag("result", "rejected").counter().count()).isGreaterThanOrEqualTo(1);
     }
 
     @Test
@@ -159,6 +167,8 @@ class SecurityEventIngestionPostgresTest {
         assertThat(secondPage.nextCursor()).isNull();
         assertThat(filtered.events()).extracting(event -> event.eventId())
                 .containsExactly(second, first);
+        assertThat(meterRegistry.get("secureflow.security.events.search.latency").timer().count())
+                .isGreaterThanOrEqualTo(3);
     }
 
     @Test

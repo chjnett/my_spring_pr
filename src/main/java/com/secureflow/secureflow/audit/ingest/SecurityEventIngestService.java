@@ -20,17 +20,20 @@ public class SecurityEventIngestService {
     private final SecurityEventNormalizer normalizer;
     private final SecurityEventIngestProperties properties;
     private final AuditEventSigner signer;
+    private final SecurityEventIngestMetrics metrics;
 
     public SecurityEventIngestService(
             JdbcTemplate jdbcTemplate,
             SecurityEventNormalizer normalizer,
             SecurityEventIngestProperties properties,
-            AuditEventSigner signer
+            AuditEventSigner signer,
+            SecurityEventIngestMetrics metrics
     ) {
         this.jdbcTemplate = jdbcTemplate;
         this.normalizer = normalizer;
         this.properties = properties;
         this.signer = signer;
+        this.metrics = metrics;
     }
 
     @Transactional
@@ -104,7 +107,11 @@ public class SecurityEventIngestService {
         int duplicate = (int) ordered.stream()
                 .filter(result -> result.status() == SecurityEventIngestStatus.DUPLICATE).count();
         int rejected = ordered.size() - accepted - duplicate;
-        return new SecurityEventBatchResponse(accepted, duplicate, rejected, List.copyOf(ordered));
+        SecurityEventBatchResponse response = new SecurityEventBatchResponse(
+                accepted, duplicate, rejected, List.copyOf(ordered)
+        );
+        metrics.record(response);
+        return response;
     }
 
     private record PreparedEvent(
