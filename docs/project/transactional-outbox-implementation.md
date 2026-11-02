@@ -118,9 +118,15 @@ V6까지 생성된 서명은 version이 없으면 v1로 검증한다. V7 이후 
 | 안전한 요청 ID | 응답 헤더·MDC·Outbox·security event에 동일하게 전파 |
 | 잘못된 요청 ID | 로그에 넣지 않고 서버 UUID로 교체 |
 | correlation ID 변조 | HMAC v2 검증 `INVALID` |
-| 전체 회귀 | 51 tests, 0 failures, 0 errors |
+| 전체 회귀 | 54 tests, 0 failures, 0 errors, 0 skipped |
 
 검증 클래스는 `TransactionalOutboxPostgresTest`이며 Testcontainers PostgreSQL 16에서 실행한다.
+
+## 실패 격리·재시도 후속 구현
+
+Flyway V8과 이벤트 단위 트랜잭션으로 poison event가 배치 전체를 막지 않도록 개선했다. 실패 이벤트는 지수 backoff로 재시도하고 최대 횟수 도달 시 `FAILED`와 `audit_outbox_dead_letter`로 격리한다. backlog·최고 지연·성공·실패·재시도·DLQ 지표와 Grafana 대시보드도 추가했다.
+
+상세 설계와 강제 실패 검증은 [Outbox 실패 격리·재시도·Dead Letter 구현 결과](outbox-failure-isolation.md)에 정리했다.
 
 ## 현재 보안 한계와 다음 작업
 
@@ -128,8 +134,8 @@ V6까지 생성된 서명은 version이 없으면 v1로 검증한다. V7 이후 
 
 1. 쓰기 전용 DB role 또는 UPDATE/DELETE 차단 정책
 2. 과거 키 검증을 지원하는 key ring/KMS 기반 키 회전
-3. 실패 횟수, `FAILED` 상태, poison event 격리와 DLQ
-4. Outbox backlog·최고 지연·발행 성공/실패 메트릭
-5. 비동기 Executor와 외부 메시지 경계의 Correlation ID 전파
+3. 비동기 Executor와 외부 메시지 경계의 Correlation ID 전파
+4. 운영자 승인·원인 기록을 포함하는 DLQ 재처리 명령
+5. Outbox 최고 지연과 DLQ 발생 Prometheus alert rule
 
-따라서 이번 결과를 “완전한 위변조 방지 감사 저장소”라고 표현하지 않는다. 현재 HMAC은 secret을 모르는 DB 변경자의 필드 변조를 탐지하지만 행 삭제, secret 탈취 후 재서명, 애플리케이션 자체의 악의적 기록은 막지 못한다. 현재 보장 범위는 원자성, 발행 재시도, 동시 Publisher 중복 방지와 저장 후 필드 변조 탐지다.
+따라서 이번 결과를 “완전한 위변조 방지 감사 저장소”라고 표현하지 않는다. 현재 HMAC은 secret을 모르는 DB 변경자의 필드 변조를 탐지하지만 행 삭제, secret 탈취 후 재서명, 애플리케이션 자체의 악의적 기록은 막지 못한다. 현재 보장 범위는 원자성, 이벤트 단위 실패 격리, 제한된 재시도와 DLQ, 동시 Publisher 중복 방지, 저장 후 필드 변조 탐지다.

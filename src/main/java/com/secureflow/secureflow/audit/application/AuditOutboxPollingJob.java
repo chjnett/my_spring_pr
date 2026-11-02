@@ -9,13 +9,18 @@ import org.springframework.stereotype.Component;
 public class AuditOutboxPollingJob {
 
     private final AuditOutboxPublisher publisher;
+    private final OutboxPublisherProperties properties;
 
-    public AuditOutboxPollingJob(AuditOutboxPublisher publisher) {
+    public AuditOutboxPollingJob(
+            AuditOutboxPublisher publisher,
+            OutboxPublisherProperties properties
+    ) {
         this.publisher = publisher;
+        this.properties = properties;
     }
 
     @Scheduled(fixedDelayString = "${secureflow.outbox.publisher.fixed-delay:1000}")
     public void publish() {
-        publisher.publishBatch(100);
+        publisher.publishBatch(properties.getBatchSize());
     }
 }

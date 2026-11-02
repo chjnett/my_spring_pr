@@ -19,6 +19,7 @@ import com.secureflow.secureflow.global.exception.DuplicateRoleGrantException;
 import com.secureflow.secureflow.global.observability.CorrelationIdContext;
 import com.secureflow.secureflow.user.User;
 import com.secureflow.secureflow.user.UserRepository;
+import io.micrometer.core.instrument.MeterRegistry;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -48,6 +49,9 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @SpringBootTest(properties = {
         "spring.jpa.hibernate.ddl-auto=validate",
         "secureflow.outbox.publisher.enabled=false",
+        "secureflow.outbox.publisher.max-attempts=2",
+        "secureflow.outbox.publisher.base-backoff=0ms",
+        "secureflow.outbox.publisher.max-backoff=0ms",
         "spring.datasource.hikari.maximum-pool-size=8"
 })
 class TransactionalOutboxPostgresTest {
@@ -64,12 +68,14 @@ class TransactionalOutboxPostgresTest {
     @Autowired RoleGrantRepository roleGrantRepository;
     @Autowired UserRepository userRepository;
     @Autowired JdbcTemplate jdbcTemplate;
+    @Autowired MeterRegistry meterRegistry;
 
     private final ExecutorService executor = Executors.newFixedThreadPool(2);
 
     @BeforeEach
     void cleanDatabase() {
         jdbcTemplate.update("delete from security_events");
+        jdbcTemplate.update("delete from audit_outbox_dead_letter");
         outboxRepository.deleteAllInBatch();
         jdbcTemplate.update("delete from idempotency_records");
         requestRepository.deleteAllInBatch();
@@ -176,6 +182,51 @@ class TransactionalOutboxPostgresTest {
     }
 
     @Test
+    void isolatesPoisonEventAndContinuesThenMovesItToDeadLetter() {
+        double publishedBefore = counter("secureflow.outbox.published");
+        double failuresBefore = counter("secureflow.outbox.failures");
+        double retriesBefore = counter("secureflow.outbox.retries");
+        double deadLettersBefore = counter("secureflow.outbox.dead.letters");
+        AuditOutboxEvent poison = new AuditOutboxEvent(
+                "RoleGrantRequest", "poison", AuditEventType.ACCESS_REQUEST_CREATED,
+                1L, "{\"poison\":true}"
+        );
+        AuditOutboxEvent healthy = new AuditOutboxEvent(
+                "RoleGrantRequest", "healthy", AuditEventType.ACCESS_REQUEST_CREATED,
+                1L, "{\"healthy\":true}"
+        );
+        outboxRepository.saveAllAndFlush(List.of(poison, healthy));
+        installPoisonEventTrigger();
+
+        assertThat(publisher.publishBatch(3)).isEqualTo(1);
+
+        assertThat(outboxRepository.findById(poison.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.FAILED);
+        assertThat(outboxRepository.findById(poison.getId()).orElseThrow().getAttemptCount())
+                .isEqualTo(2);
+        assertThat(outboxRepository.findById(healthy.getId()).orElseThrow().getStatus())
+                .isEqualTo(OutboxStatus.PUBLISHED);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from audit_outbox_dead_letter where event_id = ?",
+                Integer.class, poison.getEventId()
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from security_events where event_id = ?",
+                Integer.class, healthy.getEventId()
+        )).isEqualTo(1);
+        assertThat(jdbcTemplate.queryForObject(
+                "select count(*) from security_events where event_id = ?",
+                Integer.class, poison.getEventId()
+        )).isZero();
+        assertThat(counter("secureflow.outbox.published") - publishedBefore).isEqualTo(1);
+        assertThat(counter("secureflow.outbox.failures") - failuresBefore).isEqualTo(2);
+        assertThat(counter("secureflow.outbox.retries") - retriesBefore).isEqualTo(1);
+        assertThat(counter("secureflow.outbox.dead.letters") - deadLettersBefore).isEqualTo(1);
+        assertThat(meterRegistry.get("secureflow.outbox.pending").gauge().value()).isZero();
+        assertThat(meterRegistry.get("secureflow.outbox.dead.letter.count").gauge().value()).isEqualTo(1);
+    }
+
+    @Test
     void detectsCorrelationAndPayloadTamperingAfterEventWasPublished() {
         TestUsers users = users();
         MDC.put(CorrelationIdContext.MDC_KEY, "integration-request-123");
@@ -233,6 +284,30 @@ class TransactionalOutboxPostgresTest {
         ready.countDown();
         assertThat(start.await(10, TimeUnit.SECONDS)).isTrue();
         return publisher.publishBatch(20);
+    }
+
+    private void installPoisonEventTrigger() {
+        jdbcTemplate.execute("""
+                create or replace function reject_poison_security_event()
+                returns trigger as $$
+                begin
+                    if new.aggregate_id = 'poison' then
+                        raise exception 'simulated downstream rejection';
+                    end if;
+                    return new;
+                end;
+                $$ language plpgsql
+                """);
+        jdbcTemplate.execute("drop trigger if exists reject_poison_event on security_events");
+        jdbcTemplate.execute("""
+                create trigger reject_poison_event
+                before insert on security_events
+                for each row execute function reject_poison_security_event()
+                """);
+    }
+
+    private double counter(String name) {
+        return meterRegistry.get(name).counter().count();
     }
 
     private TestUsers users() {

@@ -50,7 +50,7 @@
 
 ## Phase 2 — Transactional Outbox 감사 로그
 
-현재 상태: 비즈니스 트랜잭션의 Outbox 기록, JDBC Publisher, 동시 선점, `event_id` 중복 방지, HMAC 변조 탐지와 HTTP Correlation ID 전파까지 구현했다. DB 권한 기반 append-only 강제·키 회전·실패 격리는 남아 있다.
+현재 상태: 비즈니스 트랜잭션의 Outbox 기록, JDBC Publisher, 동시 선점, `event_id` 중복 방지, HMAC 변조 탐지, HTTP Correlation ID 전파, 이벤트 단위 실패 격리와 DLQ까지 구현했다. DB 권한 기반 append-only 강제와 키 회전은 남아 있다.
 
 ### 구현
 
@@ -76,8 +76,12 @@
 - Flyway V6와 HMAC-SHA256 서명 추가, 정상 이벤트 `VALID`와 payload 변조 `INVALID` 검증
 - Flyway V7과 Correlation ID 필터 추가, 응답·MDC·Outbox·보안 이벤트 연결
 - HMAC v1 이전 이벤트 호환 및 correlation을 포함한 v2 서명 검증
-- 전체 51개 테스트 통과
+- Flyway V8로 재시도 시각·실패 횟수·`FAILED` 상태와 Dead Letter 테이블 추가
+- 이벤트 단위 독립 트랜잭션, 지수 backoff와 poison event 이후 정상 이벤트 계속 처리 구현
+- Outbox backlog·최고 지연·발행 성공/실패·재시도·DLQ 메트릭과 Grafana 대시보드 추가
+- 전체 54개 테스트 통과
 - 상세 근거: [Transactional Outbox 감사 이벤트 구현 결과](transactional-outbox-implementation.md)
+- 실패 격리 근거: [Outbox 실패 격리·재시도·Dead Letter 구현 결과](outbox-failure-isolation.md)
 
 ## Phase 3 — JDBC 이벤트 수집·검색
 

@@ -1,0 +1,56 @@
+{
+  "annotations": { "list": [] },
+  "editable": false,
+  "panels": [
+    {
+      "type": "stat",
+      "title": "Outbox 대기 건수",
+      "gridPos": { "h": 7, "w": 6, "x": 0, "y": 0 },
+      "targets": [{ "expr": "secureflow_outbox_pending or vector(0)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 100 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "최고 대기 시간",
+      "gridPos": { "h": 7, "w": 6, "x": 6, "y": 0 },
+      "targets": [{ "expr": "secureflow_outbox_oldest_pending_age_seconds or vector(0)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "unit": "s", "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 60 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "Dead Letter 건수",
+      "gridPos": { "h": 7, "w": 6, "x": 12, "y": 0 },
+      "targets": [{ "expr": "secureflow_outbox_dead_letter_count or vector(0)", "refId": "A" }],
+      "fieldConfig": { "defaults": { "thresholds": { "mode": "absolute", "steps": [{ "color": "green", "value": null }, { "color": "red", "value": 1 }] } }, "overrides": [] },
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "stat",
+      "title": "발행 실패",
+      "gridPos": { "h": 7, "w": 6, "x": 18, "y": 0 },
+      "targets": [{ "expr": "sum(secureflow_outbox_failures_total) or vector(0)", "refId": "A" }],
+      "options": { "reduceOptions": { "calcs": ["lastNotNull"], "values": false }, "orientation": "auto", "textMode": "auto" }
+    },
+    {
+      "type": "timeseries",
+      "title": "Outbox 처리 결과 추이",
+      "gridPos": { "h": 10, "w": 24, "x": 0, "y": 7 },
+      "targets": [
+        { "expr": "increase(secureflow_outbox_published_total[$__rate_interval])", "legendFormat": "published", "refId": "A" },
+        { "expr": "increase(secureflow_outbox_retries_total[$__rate_interval])", "legendFormat": "retry", "refId": "B" },
+        { "expr": "increase(secureflow_outbox_dead_letters_total[$__rate_interval])", "legendFormat": "dead-letter", "refId": "C" }
+      ],
+      "fieldConfig": { "defaults": { "unit": "short" }, "overrides": [] },
+      "options": { "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true }, "tooltip": { "mode": "multi" } }
+    }
+  ],
+  "schemaVersion": 41,
+  "tags": ["secureflow", "outbox", "audit"],
+  "templating": { "list": [] },
+  "time": { "from": "now-30m", "to": "now" },
+  "title": "SecureFlow · Transactional Outbox",
+  "uid": "secureflow-outbox",
+  "version": 1
+}
