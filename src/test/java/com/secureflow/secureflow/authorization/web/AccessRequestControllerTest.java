@@ -2,6 +2,7 @@ package com.secureflow.secureflow.authorization.web;
 
 import com.secureflow.secureflow.authorization.application.AccessRequestResult;
 import com.secureflow.secureflow.authorization.application.AccessRequestService;
+import com.secureflow.secureflow.authorization.application.IdempotentAccessRequestResult;
 import com.secureflow.secureflow.authorization.domain.Role;
 import com.secureflow.secureflow.authorization.domain.RoleGrantRequestStatus;
 import com.secureflow.secureflow.global.exception.SelfApprovalNotAllowedException;
@@ -29,17 +30,40 @@ class AccessRequestControllerTest {
 
     @Test
     void createsAccessRequestWithActorHeader() throws Exception {
-        when(accessRequestService.create(eq(1L), any()))
-                .thenReturn(result(RoleGrantRequestStatus.PENDING, null));
+        when(accessRequestService.createIdempotently(eq(1L), any(), eq("create-1")))
+                .thenReturn(new IdempotentAccessRequestResult(
+                        result(RoleGrantRequestStatus.PENDING, null), false
+                ));
 
         mockMvc.perform(post("/api/access-requests")
                         .header("X-Actor-Id", "1")
+                        .header("Idempotency-Key", "create-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"targetUserId":2,"role":"ADMIN","reason":"배포 작업"}
                                 """))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.requesterId").value(1))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    @Test
+    void replayedCreateReturnsOriginal201WithReplayHeader() throws Exception {
+        when(accessRequestService.createIdempotently(eq(1L), any(), eq("same-key")))
+                .thenReturn(new IdempotentAccessRequestResult(
+                        result(RoleGrantRequestStatus.PENDING, null), true
+                ));
+
+        mockMvc.perform(post("/api/access-requests")
+                        .header("X-Actor-Id", "1")
+                        .header("Idempotency-Key", "same-key")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"targetUserId":2,"role":"ADMIN","reason":"배포 작업"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
+                        .string("Idempotency-Replayed", "true"))
                 .andExpect(jsonPath("$.status").value("PENDING"));
     }
 
@@ -74,6 +98,7 @@ class AccessRequestControllerTest {
     void invalidCreateBodyReturns400() throws Exception {
         mockMvc.perform(post("/api/access-requests")
                         .header("X-Actor-Id", "1")
+                        .header("Idempotency-Key", "invalid-create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"targetUserId\":-1,\"role\":null,\"reason\":\"\"}"))
                 .andExpect(status().isBadRequest())

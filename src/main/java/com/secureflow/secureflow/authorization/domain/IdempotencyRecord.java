@@ -51,6 +51,9 @@ public class IdempotencyRecord {
     @Column(name = "response_grant_id")
     private Long responseGrantId;
 
+    @Column(name = "response_access_request_id")
+    private Long responseAccessRequestId;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "response_role", length = 30)
     private Role responseRole;
@@ -76,6 +79,11 @@ public class IdempotencyRecord {
         this.status = IdempotencyStatus.COMPLETED;
     }
 
+    public void complete(RoleGrantRequest accessRequest) {
+        this.responseAccessRequestId = accessRequest.getId();
+        this.status = IdempotencyStatus.COMPLETED;
+    }
+
     public boolean hasSameRequest(String hash) {
         return requestHash.equals(hash);
     }
@@ -89,6 +97,13 @@ public class IdempotencyRecord {
             throw new IllegalStateException("완료되지 않은 멱등성 요청에는 재사용할 응답이 없습니다.");
         }
         return new GrantedResponse(responseGrantId, userId, responseRole);
+    }
+
+    public Long completedAccessRequestId() {
+        if (!isCompleted() || responseAccessRequestId == null) {
+            throw new IllegalStateException("완료되지 않은 권한 요청에는 재사용할 응답이 없습니다.");
+        }
+        return responseAccessRequestId;
     }
 
     public record GrantedResponse(Long grantId, Long userId, Role role) {

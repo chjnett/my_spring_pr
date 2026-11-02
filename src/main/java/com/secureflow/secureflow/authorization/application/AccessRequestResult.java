@@ -28,4 +28,13 @@ public record AccessRequestResult(
                 request.getVersion(), request.getCreatedAt(), request.getUpdatedAt()
         );
     }
+
+    /** 요청이 나중에 승인·거절되어도 최초 생성 시점의 201 응답을 재구성한다. */
+    public static AccessRequestResult createdSnapshot(RoleGrantRequest request) {
+        return new AccessRequestResult(
+                request.getId(), request.getRequesterId(), request.getTargetUserId(),
+                request.getRequestedRole(), request.getReason(), RoleGrantRequestStatus.PENDING,
+                null, null, null, 0L, request.getCreatedAt(), request.getCreatedAt()
+        );
+    }
 }

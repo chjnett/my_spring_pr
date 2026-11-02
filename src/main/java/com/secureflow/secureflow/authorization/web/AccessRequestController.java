@@ -22,6 +22,7 @@ import java.util.List;
 public class AccessRequestController {
 
     private static final String ACTOR_HEADER = "X-Actor-Id";
+    private static final String IDEMPOTENCY_HEADER = "Idempotency-Key";
     private final AccessRequestService accessRequestService;
 
     public AccessRequestController(AccessRequestService accessRequestService) {
@@ -31,11 +32,19 @@ public class AccessRequestController {
     @PostMapping
     public ResponseEntity<AccessRequestResponse> create(
             @RequestHeader(ACTOR_HEADER) Long actorId,
+            @RequestHeader(IDEMPOTENCY_HEADER) String idempotencyKey,
             @Valid @RequestBody CreateAccessRequest request
     ) {
-        var result = accessRequestService.create(actorId,
-                new CreateAccessRequestCommand(request.targetUserId(), request.role(), request.reason()));
-        return ResponseEntity.status(HttpStatus.CREATED).body(AccessRequestResponse.from(result));
+        var result = accessRequestService.createIdempotently(
+                actorId,
+                new CreateAccessRequestCommand(request.targetUserId(), request.role(), request.reason()),
+                idempotencyKey
+        );
+        ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.CREATED);
+        if (result.replayed()) {
+            response.header("Idempotency-Replayed", "true");
+        }
+        return response.body(AccessRequestResponse.from(result.accessRequest()));
     }
 
     @PostMapping("/{requestId}/approve")

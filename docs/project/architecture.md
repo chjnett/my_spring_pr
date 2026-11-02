@@ -57,7 +57,7 @@ RoleGrantRequestRepository → PostgreSQL role_grant_requests
 | `POST /api/users` | `201 Created` | 잘못된 입력 `400`, 중복 이메일 `409 DUPLICATE_EMAIL` |
 | `PATCH /api/users/{id}` | `200 OK` | 없는 사용자 `404 USER_NOT_FOUND`, 잘못된 이름 `400` |
 | `POST /api/users/{userId}/role-grants` | `201 Created` | `Idempotency-Key` 재사용 본문 불일치 `422`, 새 키의 같은 권한 `409` |
-| `POST /api/access-requests` | `201 Created` | 없는 사용자 `404`, 잘못된 입력 `400` |
+| `POST /api/access-requests` | `201 Created` | 없는 사용자 `404`, 키 재사용 본문 불일치 `422` |
 | `POST /api/access-requests/{id}/approve` | `200 OK` | 자기 승인 `403`, 재처리·동시 수정 `409` |
 | `POST /api/access-requests/{id}/reject` | `200 OK` | 자기 검토 `403`, 재처리·동시 수정 `409` |
 
@@ -71,6 +71,7 @@ RoleGrantRequestRepository → PostgreSQL role_grant_requests
 6. 모듈 경계를 넘을 때는 다른 모듈의 Entity가 아니라 ID와 Port 계약을 사용한다.
 7. 멱등성 키는 `UNIQUE(user_id, request_scope, idempotency_key)`로 먼저 선점하고, 권한 변경과 최초 응답 기록을 하나의 트랜잭션으로 완료한다.
 8. 검토가 필요한 상태 전이는 `@Version`으로 경쟁을 감지하고, 요청 UPDATE를 flush한 뒤 역할을 저장한다.
+9. 권한 요청 생성은 API scope별 멱등성 키를 원자적으로 선점하고 최초 `PENDING` 응답을 재생한다.
 
 ## 다음 확장 경로
 

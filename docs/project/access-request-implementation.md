@@ -26,7 +26,7 @@
 
 | 기능 | API | 주요 응답 |
 | --- | --- | --- |
-| 요청 생성 | `POST /api/access-requests` | `201`, `PENDING` |
+| 요청 생성 | `POST /api/access-requests` + `Idempotency-Key` | `201`, 재생 헤더, 키 오용 `422` |
 | 요청 목록 | `GET /api/access-requests?status=PENDING` | `200` |
 | 요청 단건 | `GET /api/access-requests/{id}` | `200`, 없으면 `404` |
 | 승인 | `POST /api/access-requests/{id}/approve` | `200`, 동시 수정·재처리 `409` |
@@ -59,16 +59,17 @@ ACCESS_REQUEST_CONCURRENCY_RESULT approvals=2 success=1 conflicts=1 role_grants=
 - 충돌 1건은 낙관적 락 실패
 - 최종 `RoleGrant`는 1건
 - 요청의 최종 version은 1
-- Flyway V1, V2가 빈 PostgreSQL에 순서대로 적용되고 Hibernate `validate` 통과
+- Flyway V1~V3가 빈 PostgreSQL에 순서대로 적용되고 Hibernate `validate` 통과
 
 단위·웹 테스트는 생성, 승인, 거절, 자기 승인 금지, 종료 상태 재처리 금지, 입력 검증과 오류 코드를 확인한다.
 
-전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **37개 테스트 통과, 실패 0개, 21초**다. V2 추가로 기존 기동 테스트의 Flyway 최신 버전 기대값도 1에서 2로 갱신했다.
+현재 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **40개 테스트 통과, 실패 0개, 24초**다. 권한 요청 멱등성까지 반영된 Flyway 최신 버전은 V3다.
 
 ## 남은 Phase 1 작업
 
-- 권한 요청 생성 API의 `Idempotency-Key` 적용
 - 기존 직접 역할 부여 API를 내부 호환 경로로 제한하고 deprecated 문서화
 - Spring Security 인증 principal 기반 actor 식별
 - 목록 API 페이지네이션과 정렬 계약
 - 승인·거절 감사 이벤트를 Transactional Outbox에 기록
+
+권한 요청 생성 멱등성의 구조와 동시성 수치는 [권한 요청 생성 멱등성 구현 결과](access-request-idempotency.md)에 기록한다.
