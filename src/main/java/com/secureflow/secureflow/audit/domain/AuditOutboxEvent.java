@@ -61,6 +61,18 @@ public class AuditOutboxEvent {
     @Column(name = "integrity_version")
     private Integer integrityVersion;
 
+    @Column(name = "attempt_count", nullable = false)
+    private int attemptCount;
+
+    @Column(name = "next_attempt_at")
+    private Instant nextAttemptAt;
+
+    @Column(name = "last_error", length = 1000)
+    private String lastError;
+
+    @Column(name = "failed_at")
+    private Instant failedAt;
+
     protected AuditOutboxEvent() {
     }
 
@@ -79,6 +91,8 @@ public class AuditOutboxEvent {
         this.payload = payload;
         this.status = OutboxStatus.PENDING;
         this.createdAt = Instant.now();
+        this.attemptCount = 0;
+        this.nextAttemptAt = this.createdAt;
     }
 
     public Long getId() { return id; }
@@ -95,6 +109,10 @@ public class AuditOutboxEvent {
     public String getIntegritySignature() { return integritySignature; }
     public String getCorrelationId() { return correlationId; }
     public Integer getIntegrityVersion() { return integrityVersion; }
+    public int getAttemptCount() { return attemptCount; }
+    public Instant getNextAttemptAt() { return nextAttemptAt; }
+    public String getLastError() { return lastError; }
+    public Instant getFailedAt() { return failedAt; }
 
     public void sign(String keyId, String signature, String correlationId, int integrityVersion) {
         this.integrityKeyId = keyId;

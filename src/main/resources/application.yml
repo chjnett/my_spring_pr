@@ -52,3 +52,7 @@ secureflow:
     publisher:
       enabled: ${OUTBOX_PUBLISHER_ENABLED:false}
       fixed-delay: ${OUTBOX_PUBLISHER_FIXED_DELAY:1000}
+      batch-size: ${OUTBOX_PUBLISHER_BATCH_SIZE:100}
+      max-attempts: ${OUTBOX_PUBLISHER_MAX_ATTEMPTS:5}
+      base-backoff: ${OUTBOX_PUBLISHER_BASE_BACKOFF:1s}
+      max-backoff: ${OUTBOX_PUBLISHER_MAX_BACKOFF:5m}

@@ -13,7 +13,7 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
 
 [![SecureFlow 현재 아키텍처](docs/assets/secureflow-architecture.png)](docs/assets/architecture/secureflow-architecture.html)
 
-권한 요청은 Spring Security의 RBAC 검사를 거쳐 JPA 트랜잭션에서 처리된다. 같은 트랜잭션에 감사 Outbox를 남긴 뒤, 별도 JDBC Publisher가 `FOR UPDATE SKIP LOCKED`로 이벤트를 선점해 `security_events`에 멱등 적재한다. 이미지에는 흰색 배경을 고정했고, 클릭하면 `stack-diagram`으로 만든 자체 포함 상세 HTML이 열린다.
+권한 요청은 Spring Security의 RBAC 검사를 거쳐 JPA 트랜잭션에서 처리된다. 같은 트랜잭션에 감사 Outbox를 남긴 뒤, 별도 JDBC Publisher가 `FOR UPDATE SKIP LOCKED`로 이벤트를 선점해 `security_events`에 멱등 적재한다. 실패 이벤트는 지수 backoff로 재시도하고 한도 초과 시 Dead Letter로 격리한다. 이미지에는 흰색 배경을 고정했고, 클릭하면 `stack-diagram`으로 만든 자체 포함 상세 HTML이 열린다.
 
 ## IntelliJ 시작 방법
 
