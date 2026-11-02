@@ -13,6 +13,7 @@ import org.springframework.validation.annotation.Validated;
 public class SecurityEventIngestProperties {
 
     private boolean enabled;
+    private String credentialId = "bootstrap";
     private String sourceId = "local-service";
     private String apiKey = "";
 
@@ -31,6 +32,10 @@ public class SecurityEventIngestProperties {
     public String getSourceId() {
         return sourceId;
     }
+
+    public String getCredentialId() { return credentialId; }
+
+    public void setCredentialId(String credentialId) { this.credentialId = credentialId; }
 
     public void setSourceId(String sourceId) {
         this.sourceId = sourceId;
@@ -57,7 +62,8 @@ public class SecurityEventIngestProperties {
         if (!enabled) {
             return true;
         }
-        return sourceId != null && sourceId.matches("[a-zA-Z0-9][a-zA-Z0-9._-]{0,49}")
+        return credentialId != null && credentialId.matches("[a-zA-Z0-9][a-zA-Z0-9._-]{0,49}")
+                && sourceId != null && sourceId.matches("[a-zA-Z0-9][a-zA-Z0-9._-]{0,49}")
                 && apiKey != null && apiKey.length() >= 32;
     }
 }

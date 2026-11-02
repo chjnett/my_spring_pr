@@ -47,6 +47,7 @@ secureflow:
   security-events:
     ingest:
       enabled: ${SECURITY_EVENT_INGEST_ENABLED:false}
+      credential-id: ${SECURITY_EVENT_INGEST_CREDENTIAL_ID:bootstrap}
       source-id: ${SECURITY_EVENT_INGEST_SOURCE_ID:local-service}
       api-key: ${SECURITY_EVENT_INGEST_API_KEY:}
       max-batch-size: ${SECURITY_EVENT_INGEST_MAX_BATCH_SIZE:500}

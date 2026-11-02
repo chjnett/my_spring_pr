@@ -170,6 +170,7 @@
 - GitHub Actions 전체 테스트·컨테이너 빌드 및 CodeQL workflow 추가
 - 100만 건까지 조절 가능한 Node seed와 k6 수집·검색 시나리오 추가
 - [백엔드 전체 구현·운영 가이드](backend-completion-guide.md)로 실행·API·관측·부하·한계 통합 정리
+- Flyway V11 service credential registry로 source별 BCrypt hash, 만료, 폐기, 마지막 사용 시각을 추가하고, registry source가 수집 이벤트에 기록되도록 확장
 
 ## 권장 커밋 단위
 

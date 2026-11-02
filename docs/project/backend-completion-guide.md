@@ -199,7 +199,7 @@ seed/부하 테스트는 개발 DB에서만 수행한다. 운영 DB에 임의 �
 
 현재 완성은 학습·포트폴리오 수준의 실행 가능한 백엔드다. 운영 배포 전에 다음을 보완한다.
 
-1. service credential을 source별 hash·만료·회전 이력이 있는 registry로 교체한다.
+1. source별 BCrypt hash·만료·폐기·마지막 사용 시각 registry를 적용했다. `SECURITY_EVENT_INGEST_*` 환경 변수는 최초 `bootstrap` credential 생성 용도로만 사용하며, 이후 secret 교체는 새 credential을 등록하고 이전 것을 revoke하는 방식으로 수행한다.
 2. HMAC canonical data에 검색 컬럼을 직접 포함하고 이전 version 호환 key ring을 구현한다.
 3. tumbling window를 sliding/incremental rule과 late-event 재처리 정책으로 확장한다.
 4. DB 권한 차원의 append-only, Secret Manager/KMS, TLS와 네트워크 분리를 적용한다.

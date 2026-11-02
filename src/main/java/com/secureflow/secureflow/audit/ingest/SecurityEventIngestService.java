@@ -38,6 +38,11 @@ public class SecurityEventIngestService {
 
     @Transactional
     public SecurityEventBatchResponse ingest(SecurityEventBatchRequest request) {
+        return ingest(request, properties.getSourceId());
+    }
+
+    @Transactional
+    public SecurityEventBatchResponse ingest(SecurityEventBatchRequest request, String sourceId) {
         if (request.events().size() > properties.getMaxBatchSize()) {
             throw new IllegalArgumentException("한 배치는 최대 " + properties.getMaxBatchSize() + "건입니다.");
         }
@@ -79,7 +84,7 @@ public class SecurityEventIngestService {
                     item.signature().signature(),
                     correlationId,
                     item.signature().version(),
-                    properties.getSourceId(),
+                    sourceId,
                     item.event().sourceIp(),
                     item.event().outcome()
             }).toList();

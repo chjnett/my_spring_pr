@@ -7,6 +7,7 @@ import com.secureflow.secureflow.audit.ingest.SecurityEventBatchResponse;
 import com.secureflow.secureflow.audit.ingest.SecurityEventIngestService;
 import com.secureflow.secureflow.audit.ingest.SecurityEventIngestStatus;
 import com.secureflow.secureflow.audit.ingest.SecurityEventItemRequest;
+import com.secureflow.secureflow.audit.ingest.ServiceCredentialRegistry;
 import com.secureflow.secureflow.audit.query.SecurityEventPage;
 import com.secureflow.secureflow.audit.query.SecurityEventQueryException;
 import com.secureflow.secureflow.audit.query.SecurityEventQueryService;
@@ -62,6 +63,7 @@ class SecurityEventIngestionPostgresTest {
     @Autowired MockMvc mockMvc;
     @Autowired BootstrapAdminService bootstrapAdminService;
     @Autowired MeterRegistry meterRegistry;
+    @Autowired ServiceCredentialRegistry serviceCredentialRegistry;
 
     @BeforeEach
     void cleanDatabase() {
@@ -136,6 +138,37 @@ class SecurityEventIngestionPostgresTest {
                 .andExpect(status().isAccepted())
                 .andExpect(jsonPath("$.accepted").value(1))
                 .andExpect(jsonPath("$.rejected").value(0));
+    }
+
+    @Test
+    void usesCredentialRegistrySourceAndRejectsRevokedCredential() throws Exception {
+        String credentialId = "edge-gateway-2026";
+        String secret = "edge-gateway-secret-at-least-32-characters";
+        serviceCredentialRegistry.register(credentialId, "edge-gateway", secret, Instant.now().plusSeconds(3600));
+        String body = """
+                {"events":[{"eventId":"%s","eventType":"ACCESS_DENIED","actorId":9,
+                "sourceIp":"203.0.113.7","outcome":"DENIED","occurredAt":"%s",
+                "attributes":{"resource":"/admin"}}]}
+                """.formatted(UUID.randomUUID(), Instant.now().minusSeconds(5));
+
+        mockMvc.perform(post("/api/internal/security-events:batch")
+                        .header("X-SecureFlow-Credential-Id", credentialId)
+                        .header("X-SecureFlow-Ingest-Key", secret)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isAccepted());
+        assertThat(jdbcTemplate.queryForObject(
+                "select source from security_events order by id desc limit 1", String.class
+        )).isEqualTo("edge-gateway");
+
+        assertThat(serviceCredentialRegistry.revoke(credentialId)).isTrue();
+        mockMvc.perform(post("/api/internal/security-events:batch")
+                        .header("X-SecureFlow-Credential-Id", credentialId)
+                        .header("X-SecureFlow-Ingest-Key", secret)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isUnauthorized())
+                .andExpect(jsonPath("$.code").value("INVALID_SERVICE_CREDENTIAL"));
     }
 
     @Test

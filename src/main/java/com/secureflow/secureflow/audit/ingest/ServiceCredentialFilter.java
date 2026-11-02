@@ -8,18 +8,20 @@ import org.springframework.http.MediaType;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.security.MessageDigest;
 
 public class ServiceCredentialFilter extends OncePerRequestFilter {
 
     public static final String HEADER = "X-SecureFlow-Ingest-Key";
+    public static final String CREDENTIAL_ID_HEADER = "X-SecureFlow-Credential-Id";
+    public static final String SOURCE_ATTRIBUTE = "secureflow.ingest.source";
     public static final String PATH = "/api/internal/security-events:batch";
 
     private final SecurityEventIngestProperties properties;
+    private final ServiceCredentialRegistry registry;
 
-    public ServiceCredentialFilter(SecurityEventIngestProperties properties) {
+    public ServiceCredentialFilter(SecurityEventIngestProperties properties, ServiceCredentialRegistry registry) {
         this.properties = properties;
+        this.registry = registry;
     }
 
     @Override
@@ -40,22 +42,18 @@ public class ServiceCredentialFilter extends OncePerRequestFilter {
             return;
         }
         String provided = request.getHeader(HEADER);
-        if (!matches(provided, properties.getApiKey())) {
+        String credentialId = request.getHeader(CREDENTIAL_ID_HEADER);
+        if (credentialId == null || credentialId.isBlank()) {
+            credentialId = properties.getCredentialId();
+        }
+        var sourceId = registry.authenticate(credentialId, provided);
+        if (sourceId.isEmpty()) {
             writeError(response, HttpServletResponse.SC_UNAUTHORIZED,
                     "INVALID_SERVICE_CREDENTIAL", "유효한 서비스 자격 증명이 필요합니다.");
             return;
         }
+        request.setAttribute(SOURCE_ATTRIBUTE, sourceId.get());
         filterChain.doFilter(request, response);
-    }
-
-    private boolean matches(String provided, String expected) {
-        if (provided == null || expected == null) {
-            return false;
-        }
-        return MessageDigest.isEqual(
-                provided.getBytes(StandardCharsets.UTF_8),
-                expected.getBytes(StandardCharsets.UTF_8)
-        );
     }
 
     private void writeError(HttpServletResponse response, int status, String code, String message)

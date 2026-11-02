@@ -5,6 +5,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RestController;
+import jakarta.servlet.http.HttpServletRequest;
 
 @RestController
 public class SecurityEventIngestController {
@@ -17,9 +18,11 @@ public class SecurityEventIngestController {
 
     @PostMapping(ServiceCredentialFilter.PATH)
     public ResponseEntity<SecurityEventBatchResponse> ingest(
-            @Valid @RequestBody SecurityEventBatchRequest request
+            @Valid @RequestBody SecurityEventBatchRequest request,
+            HttpServletRequest servletRequest
     ) {
-        SecurityEventBatchResponse response = ingestService.ingest(request);
+        String sourceId = (String) servletRequest.getAttribute(ServiceCredentialFilter.SOURCE_ATTRIBUTE);
+        SecurityEventBatchResponse response = ingestService.ingest(request, sourceId);
         return ResponseEntity.accepted().body(response);
     }
 }

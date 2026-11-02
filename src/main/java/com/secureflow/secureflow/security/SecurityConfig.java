@@ -1,6 +1,7 @@
 package com.secureflow.secureflow.security;
 
 import com.secureflow.secureflow.audit.ingest.SecurityEventIngestProperties;
+import com.secureflow.secureflow.audit.ingest.ServiceCredentialRegistry;
 import com.secureflow.secureflow.audit.ingest.ServiceCredentialFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -19,7 +20,8 @@ public class SecurityConfig {
     @Bean
     SecurityFilterChain securityFilterChain(
             HttpSecurity http,
-            SecurityEventIngestProperties ingestProperties
+            SecurityEventIngestProperties ingestProperties,
+            ServiceCredentialRegistry serviceCredentialRegistry
     ) throws Exception {
         return http
                 .csrf(csrf -> csrf.disable())
@@ -44,7 +46,7 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .addFilterBefore(
-                        new ServiceCredentialFilter(ingestProperties),
+                        new ServiceCredentialFilter(ingestProperties, serviceCredentialRegistry),
                         BasicAuthenticationFilter.class
                 )
                 .httpBasic(Customizer.withDefaults())
