@@ -1,6 +1,12 @@
 # SecureFlow
 
-Spring Boot와 PostgreSQL로 데이터 정합성, 트랜잭션, 권한 부여를 단계적으로 실습하는 프로젝트다.
+SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고, 위험한 행위를 판정하며, 조사 가능한 감사 근거를 제공하는 **접근 권한 감사·탐지 백엔드**다.
+
+일반 비즈니스 상태와 트랜잭션은 JPA로 관리하고, 대량 보안 이벤트 적재·검색·시간 구간 집계는 JDBC로 분리한다. 현재 구현된 사용자·권한·멱등성 기반 위에 권한 승인, Transactional Outbox, 보안 이벤트 탐지와 경보 워크플로를 단계적으로 완성한다.
+
+- [포트폴리오 목표 제품·백엔드 아키텍처](docs/project/portfolio-product-architecture.md)
+- [단계별 구현 로드맵](docs/project/implementation-roadmap.md)
+- [대화형 목표 아키텍처 다이어그램](.archify/architecture-secureflow-security-platform-20261102-150735/secureflow-security-platform.html)
 
 ## IntelliJ 시작 방법
 
