@@ -85,6 +85,8 @@
 
 ## Phase 3 — JDBC 이벤트 수집·검색
 
+현재 상태: service credential 배치 수집, JDBC batch 적재, 운영자 검색과 복합 커서, 입력·조회 제한 및 PostgreSQL 인덱스 검증까지 구현했다. 다중 source credential registry와 검색 컬럼을 포함하는 차기 HMAC 서명 버전은 남아 있다.
+
 ### 구현
 
 - service credential 기반 배치 수집 API를 추가한다.
@@ -98,6 +100,17 @@
 - SQL Injection 문자열이 데이터로만 처리됨
 - 최대 조회 기간과 페이지 크기 제한 테스트
 - Testcontainers PostgreSQL 실행 계획과 인덱스 사용 확인
+
+### 2026-11-02 구현 결과
+
+- Flyway V9로 source·IP·outcome 검색 컬럼과 복합 정렬 인덱스 추가
+- service credential 보호 경로와 `JdbcTemplate.batchUpdate` 기반 최대 500건 수집 구현
+- 항목별 `ACCEPTED/DUPLICATE/REJECTED` 부분 성공 계약과 민감 attribute allowlist 적용
+- 기간·유형·actor·IP·결과 검색, `(occurred_at, id)` 기반 커서 페이지네이션 구현
+- ADMIN/AUDITOR 검색 권한, 최대 31일·200건 제한, 고정 SQL 조각과 바인딩 파라미터 적용
+- 정상·중복·부분 오류, SQL injection 데이터 처리, 권한, 커서, PostgreSQL IP 인덱스 통합 테스트 통과
+- Phase 3 반영 후 전체 61개 테스트 통과
+- 상세 근거: [보안 이벤트 배치 수집·검색 구현 결과](security-event-ingestion-search.md)
 
 ## Phase 4 — 규칙 기반 탐지와 경보
 

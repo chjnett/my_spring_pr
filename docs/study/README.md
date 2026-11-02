@@ -12,5 +12,6 @@
 | 10 | [Transactional Outbox와 SKIP LOCKED](10-transactional-outbox-and-skip-locked.md) | dual-write·행 잠금 선점·재시도 멱등성을 장애 시점으로 설명한다. |
 | 11 | [Correlation ID와 MDC](11-correlation-id-and-mdc.md) | 요청 추적 ID의 검증·ThreadLocal 정리·감사 이벤트 연결을 설명한다. |
 | 12 | [Outbox 재시도와 Dead Letter](12-outbox-retry-and-dead-letter.md) | 이벤트 단위 트랜잭션·지수 backoff·poison event 격리·운영 메트릭을 설명한다. |
+| 13 | [JDBC 배치 적재와 커서 페이지네이션](13-jdbc-batch-and-cursor-pagination.md) | 부분 성공 batch·prepared statement·복합 커서·실행 계획의 의미를 설명한다. |
 
 스터디 문서는 문제 해결 결과를 과장하지 않는다. 구현 전 알아야 할 개념, 실습 범위, 확인 질문을 관리한다.

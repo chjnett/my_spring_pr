@@ -76,3 +76,24 @@ curl -i -X POST http://localhost:8081/api/users \
 ```
 
 문서의 시작점은 [docs/README.md](docs/README.md)다. 학습, 딥다이브, 프로젝트 설계, PAAR 사례, 트러블슈팅을 분리해 관리한다.
+
+## 보안 이벤트 수집과 검색
+
+Phase 3 수집 API를 사용할 때는 source와 32자 이상의 service credential을 환경 변수로 주입한다.
+
+```bash
+SECURITY_EVENT_INGEST_ENABLED=true \
+SECURITY_EVENT_INGEST_SOURCE_ID=identity-service \
+SECURITY_EVENT_INGEST_API_KEY='replace-with-a-random-32-character-secret' \
+AUDIT_HMAC_SECRET='replace-with-at-least-32-characters' \
+./gradlew bootRun
+```
+
+```bash
+curl -i -X POST http://localhost:8081/api/internal/security-events:batch \
+  -H 'X-SecureFlow-Ingest-Key: replace-with-a-random-32-character-secret' \
+  -H 'Content-Type: application/json' \
+  -d '{"events":[{"eventId":"550e8400-e29b-41d4-a716-446655440000","eventType":"LOGIN_FAILED","actorId":42,"sourceIp":"203.0.113.10","outcome":"FAILURE","occurredAt":"2026-11-02T06:30:00Z","attributes":{"reasonCode":"BAD_PASSWORD"}}]}'
+```
+
+ADMIN 또는 AUDITOR는 `/api/security-events`에서 기간·유형·actor·IP·결과를 조합해 검색할 수 있다. API 계약과 인덱스 검증은 [보안 이벤트 배치 수집·검색 구현 결과](docs/project/security-event-ingestion-search.md), 학습할 개념은 [JDBC 배치 적재와 커서 페이지네이션](docs/study/13-jdbc-batch-and-cursor-pagination.md)에 정리했다.

@@ -44,6 +44,12 @@ secureflow:
     integrity:
       key-id: ${AUDIT_HMAC_KEY_ID:local-v1}
       secret: ${AUDIT_HMAC_SECRET}
+  security-events:
+    ingest:
+      enabled: ${SECURITY_EVENT_INGEST_ENABLED:false}
+      source-id: ${SECURITY_EVENT_INGEST_SOURCE_ID:local-service}
+      api-key: ${SECURITY_EVENT_INGEST_API_KEY:}
+      max-batch-size: ${SECURITY_EVENT_INGEST_MAX_BATCH_SIZE:500}
   bootstrap-admin:
     name: ${SECUREFLOW_BOOTSTRAP_ADMIN_NAME:SecureFlow Admin}
     email: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:}

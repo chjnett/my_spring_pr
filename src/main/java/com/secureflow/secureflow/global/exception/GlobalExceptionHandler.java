@@ -1,5 +1,6 @@
 package com.secureflow.secureflow.global.exception;
 
+import com.secureflow.secureflow.audit.query.SecurityEventQueryException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
@@ -13,6 +14,11 @@ import java.util.Map;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
+    @ExceptionHandler(SecurityEventQueryException.class)
+    public ResponseEntity<ErrorResponse> handleSecurityEventQuery(SecurityEventQueryException exception) {
+        return response(HttpStatus.BAD_REQUEST, "INVALID_SECURITY_EVENT_QUERY", exception.getMessage(), Map.of());
+    }
+
     @ExceptionHandler(UserNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleNotFound(UserNotFoundException exception) {
         return response(HttpStatus.NOT_FOUND, "USER_NOT_FOUND", exception.getMessage(), Map.of());
