@@ -9,6 +9,8 @@
 ```text
 HTTP Client
     ↓
+Spring Security              HTTP Basic 인증, DB principal, 역할 기반 인가
+    ↓
 UserController              요청 검증, HTTP 상태 코드와 DTO 경계
     ↓
 UserService (@Transactional) 유스케이스, 중복 오류를 도메인 오류로 번역
@@ -44,6 +46,7 @@ RoleGrantRequestRepository → PostgreSQL role_grant_requests
 | --- | --- | --- |
 | Language | Java 21 | 애플리케이션 언어 |
 | Framework | Spring Boot 4.1 | Web MVC, Validation, JPA 실행 환경 |
+| Security | Spring Security, BCrypt | DB 인증 principal과 역할 기반 접근 제어 |
 | Persistence | Spring Data JPA / Hibernate | Entity 관리와 변경 감지 |
 | Development DB | PostgreSQL 16 Docker Compose | IntelliJ에서 API를 직접 확인하는 영속 환경 |
 | Fast test | JUnit 5, Mockito, H2 | 빠른 단위·JPA 테스트 |
@@ -72,7 +75,8 @@ RoleGrantRequestRepository → PostgreSQL role_grant_requests
 7. 멱등성 키는 `UNIQUE(user_id, request_scope, idempotency_key)`로 먼저 선점하고, 권한 변경과 최초 응답 기록을 하나의 트랜잭션으로 완료한다.
 8. 검토가 필요한 상태 전이는 `@Version`으로 경쟁을 감지하고, 요청 UPDATE를 flush한 뒤 역할을 저장한다.
 9. 권한 요청 생성은 API scope별 멱등성 키를 원자적으로 선점하고 최초 `PENDING` 응답을 재생한다.
+10. actor ID는 클라이언트 입력이 아니라 인증 principal에서 가져오고, 검토 API는 `ADMIN/AUDITOR`에만 허용한다.
 
 ## 다음 확장 경로
 
-권한 요청의 낙관적 락을 추가했다. 다음 단계에서는 요청 생성 멱등성과 Spring Security actor 식별을 완료한 뒤 Transactional Outbox 감사 로그로 확장한다.
+권한 요청 상태·멱등성·인증·인가 흐름을 완성했다. 다음 단계에서는 직접 역할 부여 API를 내부 관리 경로로 정리하고 Transactional Outbox 감사 로그로 확장한다.

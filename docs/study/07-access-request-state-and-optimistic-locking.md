@@ -54,15 +54,15 @@ JPA 변경 감지는 보통 트랜잭션 커밋 시점까지 SQL 실행을 미�
 2. flush 후 예외가 나면 DB 변경이 항상 남는가?
 3. `AccessRequestService.approve`에서 `@Transactional`을 제거하면 어떤 원자성이 깨지는가?
 
-## 4. 임시 actor 헤더의 보안 한계
+## 4. actor 헤더에서 인증 principal로 전환
 
-현재 `X-Actor-Id`는 인증 기능을 구현하기 전 API 흐름을 검증하기 위한 임시 입력이다. 공격자는 다른 사용자 ID를 넣어 요청자나 검토자인 척할 수 있다. 운영에서는 다음 흐름으로 바꿔야 한다.
+초기 구현의 `X-Actor-Id`는 공격자가 다른 ID를 넣을 수 있는 임시 입력이었다. 현재는 다음 Spring Security 흐름으로 교체했다.
 
 ```text
 Authorization 헤더 → Spring Security 인증 → Authentication principal → actorId
 ```
 
-요청 body에 actor ID를 넣지 않는 이유는 비즈니스 데이터와 인증 주체를 분리하기 위해서다. 헤더 역시 현재는 신뢰할 수 없지만, Controller의 교체 지점을 분명히 보여 준다.
+요청 body에 actor ID를 넣지 않는 이유는 비즈니스 데이터와 인증 주체를 분리하기 위해서다. 현재 Controller는 인증 principal의 user ID만 사용한다.
 
 ## 직접 해볼 실습
 
@@ -70,6 +70,6 @@ Authorization 헤더 → Spring Security 인증 → Authentication principal →
 2. `saveAndFlush`와 역할 저장 순서를 바꾸고 발생하는 예외 종류를 비교한다.
 3. `CANCELLED` 상태와 “요청자만 PENDING 요청을 취소” 규칙을 테스트 우선으로 추가한다.
 4. 목록 API에 `page`, `size`, `sort`를 추가하고 최대 size를 100으로 제한한다.
-5. Spring Security 테스트 principal로 `X-Actor-Id`를 제거하는 설계를 작성한다.
+5. `MEMBER`와 `AUDITOR` principal로 승인 API의 `403/200` 차이를 테스트한다.
 
 완료 기준은 코드를 외우는 것이 아니라, “왜 DB UNIQUE만으로는 요청 상태 경쟁을 충분히 표현하지 못하는가”와 “flush는 commit이 아니다”를 자신의 말로 설명하는 것이다.

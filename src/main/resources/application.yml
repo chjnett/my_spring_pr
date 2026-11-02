@@ -34,3 +34,9 @@ management:
   metrics:
     tags:
       application: ${spring.application.name}
+
+secureflow:
+  bootstrap-admin:
+    name: ${SECUREFLOW_BOOTSTRAP_ADMIN_NAME:SecureFlow Admin}
+    email: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:}
+    password: ${SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD:}

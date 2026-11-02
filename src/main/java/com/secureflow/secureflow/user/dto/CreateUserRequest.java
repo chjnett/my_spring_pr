@@ -2,6 +2,7 @@ package com.secureflow.secureflow.user.dto;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.Size;
 
 
 //Entity는 데이터베이스와 매핑되는 객체,DTO(API 응답에 필요한 데이터만 DTO로 변환 계층간 데이터를 전달
@@ -15,7 +16,11 @@ public record CreateUserRequest (
 
         @NotBlank
         @Email
-        String email
+        String email,
+
+        @NotBlank
+        @Size(min = 12, max = 72)
+        String password
 
 
 ){}

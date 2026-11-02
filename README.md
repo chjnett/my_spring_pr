@@ -23,6 +23,8 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
 4. IntelliJ에서 `SecureflowApplication`을 실행하거나 터미널에서 실행한다.
 
    ```bash
+   SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL=admin@example.com \
+   SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD='change-this-password' \
    ./gradlew bootRun
    ```
 
@@ -51,7 +53,7 @@ docker compose up -d prometheus grafana
 ```bash
 curl -i -X POST http://localhost:8081/api/users \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com"}'
+  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com","password":"secure-password-123"}'
 ```
 
 문서의 시작점은 [docs/README.md](docs/README.md)다. 학습, 딥다이브, 프로젝트 설계, PAAR 사례, 트러블슈팅을 분리해 관리한다.

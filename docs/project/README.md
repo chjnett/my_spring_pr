@@ -8,5 +8,6 @@
 - [개발용 PostgreSQL과 자동 테스트 전략](development-database-and-test-strategy.md)
 - [권한 요청·승인 구현 결과](access-request-implementation.md)
 - [권한 요청 생성 멱등성 구현 결과](access-request-idempotency.md)
+- [Spring Security 인증·인가 구현 결과](authentication-and-authorization.md)
 
 기능을 추가하거나 인프라를 바꾸면 먼저 이 문서가 실제 코드와 일치하는지 확인한다.

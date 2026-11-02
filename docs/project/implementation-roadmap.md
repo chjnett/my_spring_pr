@@ -21,7 +21,7 @@
 
 ## Phase 1 — 권한 요청·승인 제품 흐름
 
-현재 상태: 핵심 상태 모델·API·동시 승인 방어·요청 생성 멱등성 구현 완료. 인증 연동과 직접 부여 API 정리는 남아 있다.
+현재 상태: 핵심 상태 모델·API·동시 승인 방어·요청 생성 멱등성·Spring Security 인증/인가 구현 완료. 직접 부여 API 정리는 남아 있다.
 
 ### 구현
 
@@ -43,8 +43,10 @@
 - 자기 검토와 종료 상태 재처리 차단
 - PostgreSQL 동시 승인 결과: 2건 중 1건 성공, 1건 충돌, 역할 1건, version 1
 - PostgreSQL 동일 멱등성 키 20건: 생성 1건, 최초 응답 재생 19건
+- DB BCrypt 인증과 RBAC: 미인증/오인증 `401`, MEMBER 승인 `403`, ADMIN 승인 `200`
 - 상세 근거: [권한 요청·승인 구현 결과](access-request-implementation.md)
 - 멱등성 근거: [권한 요청 생성 멱등성 구현 결과](access-request-idempotency.md)
+- 인증·인가 근거: [Spring Security 인증·인가 구현 결과](authentication-and-authorization.md)
 
 ## Phase 2 — Transactional Outbox 감사 로그
 

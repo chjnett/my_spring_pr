@@ -79,7 +79,7 @@ IntelliJ에서 `SecureflowApplication`을 실행하거나 터미널에서 실행
 ```bash
 curl -i -X POST http://localhost:8081/api/users \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com"}'
+  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com","password":"secure-password-123"}'
 ```
 
 기대 결과는 `201 Created`다. 같은 이메일로 다시 요청하면 `409`와 `DUPLICATE_EMAIL` 계약을 확인한다.
@@ -87,7 +87,7 @@ curl -i -X POST http://localhost:8081/api/users \
 ```bash
 curl -i -X POST http://localhost:8081/api/users \
   -H 'Content-Type: application/json' \
-  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com"}'
+  -d '{"name":"Hyeonjun","email":"hyeonjun@example.com","password":"secure-password-123"}'
 ```
 
 ## 자동 테스트는 개발 DB를 사용하지 않는다
@@ -105,7 +105,8 @@ curl -i -X POST http://localhost:8081/api/users \
 | `DuplicateEmailConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 동시 가입 20건에서 UNIQUE 제약이 한 건만 저장하는지 |
 | `RoleGrantConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 동일 권한 동시 부여를 DB 제약이 한 건으로 제한하는지 |
 | `IdempotencyKeyConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 같은 키 20건이 최초 결과 한 건을 재사용하는지 |
-| `SecureflowApplicationTests` | H2 + Flyway | V1 migration 적용과 JPA schema validation |
+| `SecurityAuthenticationIntegrationTest` | Testcontainers PostgreSQL 16 | BCrypt 인증과 MEMBER/ADMIN 역할 인가 |
+| `SecureflowApplicationTests` | H2 + Flyway | V1~V4 migration 적용과 JPA schema validation |
 
 Testcontainers 테스트는 Docker를 사용하지만 Compose의 `secureflow-postgres` 컨테이너를 재사용하지 않는다. 테스트 전용 PostgreSQL 컨테이너를 만들고, 테스트가 끝나면 정리한다.
 

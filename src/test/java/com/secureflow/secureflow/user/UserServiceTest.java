@@ -12,6 +12,10 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import com.secureflow.secureflow.security.UserCredentialRepository;
+import com.secureflow.secureflow.authorization.persistence.RoleGrantRepository;
+import com.secureflow.secureflow.security.UserCredential;
 
 import java.sql.SQLException;
 import java.util.Optional;
@@ -33,10 +37,16 @@ class UserServiceTest {
     @Mock
     private UserRepository userRepository;
 
+    @Mock private UserCredentialRepository credentialRepository;
+    @Mock private RoleGrantRepository roleGrantRepository;
+    @Mock private PasswordEncoder passwordEncoder;
+
     private UserService userService;
     @BeforeEach
     void setUp(){
-        userService=new UserService(userRepository);
+        userService = new UserService(
+                userRepository, credentialRepository, roleGrantRepository, passwordEncoder
+        );
 
 
     }
@@ -45,10 +55,11 @@ class UserServiceTest {
     @Test
     void createsUserWhenEmailIsAvailable() {
 
-        CreateUserRequest request = new CreateUserRequest("Hyeonjun", "hyeonjun@example.com");
+        CreateUserRequest request = request("Hyeonjun", "hyeonjun@example.com");
         User savedUser = new User(request.name(), request.email());
         when(userRepository.existsByEmail(request.email())).thenReturn(false);
         when(userRepository.saveAndFlush(any(User.class))).thenReturn(savedUser);
+        when(passwordEncoder.encode(request.password())).thenReturn("bcrypt-hash");
 
         UserResponse response = userService.createUser(request);
 
@@ -57,6 +68,7 @@ class UserServiceTest {
         ArgumentCaptor<User> captor = ArgumentCaptor.forClass(User.class);
         verify(userRepository).saveAndFlush(captor.capture());
         assertThat(captor.getValue().getEmail()).isEqualTo(request.email());
+        verify(credentialRepository).save(any(UserCredential.class));
     }
 
     @Test
@@ -64,13 +76,13 @@ class UserServiceTest {
 
         when(userRepository.existsByEmail(anyString())).thenReturn(true);
 
-        assertThatThrownBy(() -> userService.createUser(new CreateUserRequest("Hyeonjun", "taken@example.com")))
+        assertThatThrownBy(() -> userService.createUser(request("Hyeonjun", "taken@example.com")))
                 .isInstanceOf(DuplicateEmailException.class);
     }
 
     @Test
     void translatesDatabaseUniqueViolationToDuplicateEmail() {
-        CreateUserRequest request = new CreateUserRequest("Hyeonjun", "race@example.com");
+        CreateUserRequest request = request("Hyeonjun", "race@example.com");
         SQLException postgresException = new SQLException(
                 "duplicate key value violates unique constraint \"uk_user_email\"",
                 "23505"
@@ -86,7 +98,7 @@ class UserServiceTest {
 
     @Test
     void doesNotTranslateUnrelatedIntegrityViolationToDuplicateEmail() {
-        CreateUserRequest request = new CreateUserRequest("Hyeonjun", "error@example.com");
+        CreateUserRequest request = request("Hyeonjun", "error@example.com");
         SQLException postgresException = new SQLException("null value violates not-null constraint", "23502");
         DataIntegrityViolationException integrityViolation =
                 new DataIntegrityViolationException("invalid user", postgresException);
@@ -124,5 +136,9 @@ class UserServiceTest {
 
         assertThatThrownBy(() -> userService.modifyUser(404L, new UpdateUserRequest("after")))
                 .isInstanceOf(UserNotFoundException.class);
+    }
+
+    private CreateUserRequest request(String name, String email) {
+        return new CreateUserRequest(name, email, "secure-password-123");
     }
 }

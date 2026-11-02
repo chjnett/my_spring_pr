@@ -6,17 +6,22 @@ import com.secureflow.secureflow.authorization.application.IdempotentAccessReque
 import com.secureflow.secureflow.authorization.domain.Role;
 import com.secureflow.secureflow.authorization.domain.RoleGrantRequestStatus;
 import com.secureflow.secureflow.global.exception.SelfApprovalNotAllowedException;
+import com.secureflow.secureflow.security.SecureFlowPrincipal;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
 import org.springframework.http.MediaType;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.time.Instant;
 
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -30,13 +35,13 @@ class AccessRequestControllerTest {
 
     @Test
     void createsAccessRequestWithActorHeader() throws Exception {
-        when(accessRequestService.createIdempotently(eq(1L), any(), eq("create-1")))
+        when(accessRequestService.createIdempotently(anyLong(), any(), eq("create-1")))
                 .thenReturn(new IdempotentAccessRequestResult(
                         result(RoleGrantRequestStatus.PENDING, null), false
                 ));
 
         mockMvc.perform(post("/api/access-requests")
-                        .header("X-Actor-Id", "1")
+                        .principal(actor(1L, "MEMBER"))
                         .header("Idempotency-Key", "create-1")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -45,17 +50,18 @@ class AccessRequestControllerTest {
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.requesterId").value(1))
                 .andExpect(jsonPath("$.status").value("PENDING"));
+        verify(accessRequestService).createIdempotently(eq(1L), any(), eq("create-1"));
     }
 
     @Test
     void replayedCreateReturnsOriginal201WithReplayHeader() throws Exception {
-        when(accessRequestService.createIdempotently(eq(1L), any(), eq("same-key")))
+        when(accessRequestService.createIdempotently(anyLong(), any(), eq("same-key")))
                 .thenReturn(new IdempotentAccessRequestResult(
                         result(RoleGrantRequestStatus.PENDING, null), true
                 ));
 
         mockMvc.perform(post("/api/access-requests")
-                        .header("X-Actor-Id", "1")
+                        .principal(actor(1L, "MEMBER"))
                         .header("Idempotency-Key", "same-key")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
@@ -65,39 +71,42 @@ class AccessRequestControllerTest {
                 .andExpect(org.springframework.test.web.servlet.result.MockMvcResultMatchers.header()
                         .string("Idempotency-Replayed", "true"))
                 .andExpect(jsonPath("$.status").value("PENDING"));
+        verify(accessRequestService).createIdempotently(eq(1L), any(), eq("same-key"));
     }
 
     @Test
     void approvesAccessRequest() throws Exception {
-        when(accessRequestService.approve(10L, 3L, "업무 확인"))
+        when(accessRequestService.approve(eq(10L), anyLong(), eq("업무 확인")))
                 .thenReturn(result(RoleGrantRequestStatus.APPROVED, 3L));
 
         mockMvc.perform(post("/api/access-requests/10/approve")
-                        .header("X-Actor-Id", "3")
+                        .principal(actor(3L, "AUDITOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"reason\":\"업무 확인\"}"))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.status").value("APPROVED"))
                 .andExpect(jsonPath("$.reviewerId").value(3));
+        verify(accessRequestService).approve(10L, 3L, "업무 확인");
     }
 
     @Test
     void selfApprovalReturns403() throws Exception {
-        when(accessRequestService.approve(10L, 1L, null))
+        when(accessRequestService.approve(eq(10L), anyLong(), eq(null)))
                 .thenThrow(new SelfApprovalNotAllowedException(10L, 1L));
 
         mockMvc.perform(post("/api/access-requests/10/approve")
-                        .header("X-Actor-Id", "1")
+                        .principal(actor(1L, "AUDITOR"))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{}"))
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.code").value("SELF_APPROVAL_NOT_ALLOWED"));
+        verify(accessRequestService).approve(10L, 1L, null);
     }
 
     @Test
     void invalidCreateBodyReturns400() throws Exception {
         mockMvc.perform(post("/api/access-requests")
-                        .header("X-Actor-Id", "1")
+                        .principal(actor(1L, "MEMBER"))
                         .header("Idempotency-Key", "invalid-create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"targetUserId\":-1,\"role\":null,\"reason\":\"\"}"))
@@ -111,5 +120,13 @@ class AccessRequestControllerTest {
                 10L, 1L, 2L, Role.ADMIN, "배포 작업", status,
                 reviewerId, null, reviewerId == null ? null : now, 0L, now, now
         );
+    }
+
+    private UsernamePasswordAuthenticationToken actor(Long userId, String role) {
+        var authorities = java.util.List.of(new SimpleGrantedAuthority("ROLE_" + role));
+        var principal = new SecureFlowPrincipal(
+                userId, "user" + userId + "@example.com", "password-hash", authorities
+        );
+        return new UsernamePasswordAuthenticationToken(principal, null, authorities);
     }
 }

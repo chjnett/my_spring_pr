@@ -22,7 +22,7 @@
 
 ## API 계약
 
-현재 인증 모듈이 없기 때문에 요청자·검토자 식별자는 임시로 `X-Actor-Id` 헤더에서 받는다. 이 값은 클라이언트가 위조할 수 있으므로 운영용 인증·인가 수단이 아니다. Spring Security 도입 시 인증 principal을 읽는 어댑터로 교체해야 한다.
+요청자·검토자 ID는 Spring Security가 인증한 `SecureFlowPrincipal`에서만 읽는다. `MEMBER`는 요청을 생성할 수 있고, 승인·거절은 `ADMIN` 또는 `AUDITOR`만 가능하다. 상세 구현은 [Spring Security 인증·인가 구현 결과](authentication-and-authorization.md)에 기록한다.
 
 | 기능 | API | 주요 응답 |
 | --- | --- | --- |
@@ -63,12 +63,11 @@ ACCESS_REQUEST_CONCURRENCY_RESULT approvals=2 success=1 conflicts=1 role_grants=
 
 단위·웹 테스트는 생성, 승인, 거절, 자기 승인 금지, 종료 상태 재처리 금지, 입력 검증과 오류 코드를 확인한다.
 
-현재 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **40개 테스트 통과, 실패 0개, 24초**다. 권한 요청 멱등성까지 반영된 Flyway 최신 버전은 V3다.
+현재 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **41개 테스트 통과, 실패 0개, 31초**다. DB 인증까지 반영된 Flyway 최신 버전은 V4다.
 
 ## 남은 Phase 1 작업
 
 - 기존 직접 역할 부여 API를 내부 호환 경로로 제한하고 deprecated 문서화
-- Spring Security 인증 principal 기반 actor 식별
 - 목록 API 페이지네이션과 정렬 계약
 - 승인·거절 감사 이벤트를 Transactional Outbox에 기록
 

@@ -6,6 +6,9 @@ import com.secureflow.secureflow.user.dto.UserResponse;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import com.secureflow.secureflow.security.UserCredentialRepository;
+import com.secureflow.secureflow.authorization.persistence.RoleGrantRepository;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -29,10 +32,14 @@ class UserServiceTransactionBoundaryTest {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired private UserCredentialRepository credentialRepository;
+    @Autowired private RoleGrantRepository roleGrantRepository;
+    @Autowired private PasswordEncoder passwordEncoder;
+
     @Test
     void updatesUserWhenSpringProxyAppliesTransactional() {
         UserResponse createdUser = userService.createUser(
-                new CreateUserRequest("before", "proxy@example.com")
+                new CreateUserRequest("before", "proxy@example.com", "secure-password-123")
         );
 
         userService.modifyUser(createdUser.id(), new UpdateUserRequest("after"));
@@ -45,9 +52,11 @@ class UserServiceTransactionBoundaryTest {
     @Test
     void doesNotUpdateUserWhenServiceIsCreatedWithoutSpringProxy() {
         UserResponse createdUser = userService.createUser(
-                new CreateUserRequest("before", "without-proxy@example.com")
+                new CreateUserRequest("before", "without-proxy@example.com", "secure-password-123")
         );
-        UserService serviceWithoutProxy = new UserService(userRepository);
+        UserService serviceWithoutProxy = new UserService(
+                userRepository, credentialRepository, roleGrantRepository, passwordEncoder
+        );
 
         serviceWithoutProxy.modifyUser(createdUser.id(), new UpdateUserRequest("after"));
 
