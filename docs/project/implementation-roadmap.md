@@ -145,7 +145,7 @@
 
 ## Phase 5 — 운영 품질과 포트폴리오 패키징
 
-현재 상태: 컨테이너 기반 전체 실행, Prometheus/Grafana 보안 파이프라인 지표, GitHub Actions 테스트·이미지 빌드·CodeQL, 100만 건 seed와 k6 수집·검색 시나리오, 백엔드 통합 가이드를 구현했다. 실제 환경에서의 부하 수치와 SLO는 seed를 실행해 기록해야 한다.
+현재 상태: 컨테이너 기반 전체 실행, Prometheus/Grafana 보안 파이프라인 지표, GitHub Actions 테스트·이미지 빌드·CodeQL, 100만 건 seed와 k6 수집·검색 실측, 백엔드 통합 가이드를 완료했다. 학습·포트폴리오 범위의 백엔드 기능은 동결한다.
 
 ### 구현
 
@@ -171,6 +171,9 @@
 - 100만 건까지 조절 가능한 Node seed와 k6 수집·검색 시나리오 추가
 - [백엔드 전체 구현·운영 가이드](backend-completion-guide.md)로 실행·API·관측·부하·한계 통합 정리
 - Flyway V11 service credential registry로 source별 BCrypt hash, 만료, 폐기, 마지막 사용 시각을 추가하고, registry source가 수집 이벤트에 기록되도록 확장
+- HMAC v3·과거 키 key ring과 application DB 계정 append-only 권한 적용
+- 100만 건 seed 3,118 events/s, 수집 p95 206ms, 검색 p95 140ms·p99 209ms 실측
+- [백엔드 완료 판정과 후속 작업](backend-status-2026-11-02.md)에서 포트폴리오 완료와 운영 전 과제를 분리
 
 ## 권장 커밋 단위
 

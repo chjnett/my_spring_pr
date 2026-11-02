@@ -10,6 +10,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.UUID;
 
 @Entity
@@ -90,7 +91,9 @@ public class AuditOutboxEvent {
         this.actorId = actorId;
         this.payload = payload;
         this.status = OutboxStatus.PENDING;
-        this.createdAt = Instant.now();
+        // PostgreSQL timestamp stores microseconds. Sign exactly the value that can be persisted so
+        // Linux nanosecond clocks do not produce a different HMAC after the row is read back.
+        this.createdAt = Instant.now().truncatedTo(ChronoUnit.MICROS);
         this.attemptCount = 0;
         this.nextAttemptAt = this.createdAt;
     }

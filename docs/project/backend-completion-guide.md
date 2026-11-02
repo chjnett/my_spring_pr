@@ -166,7 +166,7 @@ Grafana에는 기존 Outbox 대시보드와 `SecureFlow · Security Pipeline` �
 ./gradlew test
 ```
 
-통합 테스트는 Testcontainers PostgreSQL 16을 사용한다. 현재 회귀 기준은 66개 테스트이며, 변경 후에는 CI에서 그 수보다 통과/실패 여부를 기준으로 확인한다.
+통합 테스트는 Testcontainers PostgreSQL 16을 사용한다. 2026-11-02 기준 전체 71개 테스트가 통과하며, 이후에는 고정된 개수보다 CI의 실패 여부와 신규 기능의 회귀 테스트 포함 여부를 기준으로 확인한다.
 
 대량 seed는 기본 100만 건이다. 실제 실행 전에는 먼저 작게 시작한다.
 
@@ -197,14 +197,10 @@ seed/부하 테스트는 개발 DB에서만 수행한다. 운영 DB에 임의 �
 
 로컬 검증은 CI를 대체하지 않는다. 특히 Testcontainers, Docker multi-stage build, CodeQL은 GitHub Actions 결과까지 확인해야 한다.
 
-## 설계상 남은 작업
+## 완료 판정과 운영 전 과제
 
-현재 완성은 학습·포트폴리오 수준의 실행 가능한 백엔드다. 운영 배포 전에 다음을 보완한다.
+source별 credential registry, HMAC v3와 과거 키 key ring, application DB 계정의 append-only 권한, 100만 건 성능 측정까지 완료했다. 따라서 학습·포트폴리오 범위의 백엔드 기능은 동결한다.
 
-1. source별 BCrypt hash·만료·폐기·마지막 사용 시각 registry를 적용했다. `SECURITY_EVENT_INGEST_*` 환경 변수는 최초 `bootstrap` credential 생성 용도로만 사용하며, 이후 secret 교체는 새 credential을 등록하고 이전 것을 revoke하는 방식으로 수행한다.
-2. HMAC canonical data에 검색 컬럼을 직접 포함하고 이전 version 호환 key ring을 구현한다.
-3. tumbling window를 sliding/incremental rule과 late-event 재처리 정책으로 확장한다.
-4. DB 권한 차원의 append-only, Secret Manager/KMS, TLS와 네트워크 분리를 적용한다.
-5. 100만 건 seed 기준 p50/p95/p99 지연 시간, 처리량, event-to-alert 실측을 완료했다([100만 건 벤치마크 결과](performance-benchmark-2026-11-02.md)). 운영 환경에 배포할 때는 이를 기준으로 지속적 모니터링 경보(Alerting Rule)를 구성한다.
+실제 운영 배포를 결정하면 KMS/Secret Manager, TLS·네트워크 정책, 백업·복구 훈련, Alerting Rule, DLQ 재처리, sliding/incremental 탐지와 late-event 정책을 별도 작업으로 시작한다. 현재 10분 tumbling window의 실측 Event-to-Alert 평균은 약 8분이므로 낮은 지연 SLO가 필요하면 탐지 구조를 재설계해야 한다.
 
-이 범위와 한계를 분명히 하면 “단순 CRUD 스터디”가 아니라 트랜잭션, 멱등성, 동시성, 감사 무결성, 운영 관측을 직접 설계·검증한 백엔드 포트폴리오가 된다.
+완료 범위, 중단할 작업과 운영 전 후속 과제는 [백엔드 완료 판정 문서](backend-status-2026-11-02.md)를 기준으로 한다.

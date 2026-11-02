@@ -2,6 +2,12 @@
 
 이 문서는 SecureFlow를 처음 읽는 사람이 많은 문서 사이에서 길을 잃지 않도록 만든 안내서다. 아래 순서를 따르면 **프로젝트 목적 → 전체 구조 → 핵심 기능 → 운영 방법 → 세부 학습 자료**의 흐름으로 이해할 수 있다.
 
+## 현재 프로젝트 상태
+
+2026-11-02 기준으로 학습·포트폴리오 범위의 백엔드는 완료되어 기능을 동결한다. 71개 자동 테스트와 100만 건 개발 DB 벤치마크까지 마쳤으며, 이후 백엔드 변경은 버그 수정이나 실제 배포 요구가 생긴 경우에만 재개한다.
+
+이 상태는 실서비스 운영 준비 완료를 의미하지 않는다. 완료 근거, 지금 멈출 범위와 운영 전 과제는 [백엔드 완료 판정과 후속 작업](docs/project/backend-status-2026-11-02.md)에서 확인한다.
+
 ## 1. 먼저 알아둘 프로젝트 한 줄 요약
 
 SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, 외부 보안 로그를 수집·검색한 뒤 규칙 기반 탐지와 경보 대응까지 수행하는 Spring Boot 보안 운영 플랫폼이다.
@@ -19,7 +25,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 ### 1단계: 프로젝트 전체 모습 파악
 
-먼저 [백엔드 포트폴리오 가이드](secureflow/docs/project/backend-portfolio-guide.md)를 읽는다.
+먼저 [백엔드 포트폴리오 가이드](docs/project/backend-portfolio-guide.md)를 읽는다.
 
 이 문서에서는 다음 내용을 파악하면 된다.
 
@@ -37,7 +43,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 ### 2단계: 전체 아키텍처 이해
 
-[아키텍처 문서](secureflow/docs/project/architecture.md)를 읽는다.
+[아키텍처 문서](docs/project/architecture.md)를 읽는다.
 
 다음 흐름을 중심으로 본다.
 
@@ -61,8 +67,8 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 아래 두 문서를 순서대로 읽는다.
 
-1. [인증·인가 설계](secureflow/docs/project/authentication-and-authorization.md)
-2. [접근 권한 요청 구현](secureflow/docs/project/access-request-implementation.md)
+1. [인증·인가 설계](docs/project/authentication-and-authorization.md)
+2. [접근 권한 요청 구현](docs/project/access-request-implementation.md)
 
 중점적으로 볼 내용은 다음과 같다.
 
@@ -75,7 +81,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 멱등성 처리가 궁금하면 다음 문서를 이어서 읽는다.
 
-- [접근 요청 멱등성](secureflow/docs/project/access-request-idempotency.md)
+- [접근 요청 멱등성](docs/project/access-request-idempotency.md)
 
 다음 질문에 답할 수 있으면 4단계로 넘어간다.
 
@@ -83,7 +89,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 ### 4단계: 감사 이벤트와 Transactional Outbox 이해
 
-[Transactional Outbox 구현](secureflow/docs/project/transactional-outbox-implementation.md)을 읽는다.
+[Transactional Outbox 구현](docs/project/transactional-outbox-implementation.md)을 읽는다.
 
 이 문서는 SecureFlow의 핵심 문서 중 하나다. 다음 내용을 중심으로 본다.
 
@@ -96,7 +102,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 장애가 발생한 이벤트를 어떻게 격리하는지는 다음 문서에서 확인한다.
 
-- [Outbox 실패 격리·재시도·Dead Letter](secureflow/docs/project/outbox-failure-isolation.md)
+- [Outbox 실패 격리·재시도·Dead Letter](docs/project/outbox-failure-isolation.md)
 
 다음 질문에 답할 수 있으면 5단계로 넘어간다.
 
@@ -104,7 +110,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 ### 5단계: 외부 보안 이벤트 수집과 검색 이해
 
-[보안 이벤트 수집·검색](secureflow/docs/project/security-event-ingestion-search.md)을 읽는다.
+[보안 이벤트 수집·검색](docs/project/security-event-ingestion-search.md)을 읽는다.
 
 다음 내용을 확인한다.
 
@@ -123,7 +129,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 ### 6단계: 규칙 탐지와 경보 처리 이해
 
-[규칙 탐지와 경보 흐름](secureflow/docs/project/rule-detection-and-alert-workflow.md)을 읽는다.
+[규칙 탐지와 경보 흐름](docs/project/rule-detection-and-alert-workflow.md)을 읽는다.
 
 중점적으로 볼 내용은 다음과 같다.
 
@@ -140,7 +146,7 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 ### 7단계: 직접 실행하고 검증하기
 
-[백엔드 전체 구현·운영 가이드](secureflow/docs/project/backend-completion-guide.md)를 읽고 프로젝트를 실행한다.
+[백엔드 전체 구현·운영 가이드](docs/project/backend-completion-guide.md)를 읽고 프로젝트를 실행한다.
 
 이 문서에서 확인할 내용은 다음과 같다.
 
@@ -154,25 +160,26 @@ SecureFlow는 사용자의 권한 변경을 감사 이벤트로 기록하고, �
 
 실제 실행 기록과 100만 건 대규모 벤치마크 실측 결과는 다음 문서에 있다.
 
-- [라이브 스모크 테스트 기록](secureflow/docs/project/live-smoke-test-2026-11-02.md)
-- [100만 건 벤치마크 및 성능 결과](secureflow/docs/project/performance-benchmark-2026-11-02.md)
+- [라이브 스모크 테스트 기록](docs/project/live-smoke-test-2026-11-02.md)
+- [100만 건 벤치마크 및 성능 결과](docs/project/performance-benchmark-2026-11-02.md)
 
 ## 3. 기능과 문서 빠른 연결표
 
 | 궁금한 내용 | 먼저 읽을 문서 |
 | --- | --- |
-| 프로젝트 전체 설명 | [백엔드 포트폴리오 가이드](secureflow/docs/project/backend-portfolio-guide.md) |
-| 전체 요청·데이터 흐름 | [아키텍처](secureflow/docs/project/architecture.md) |
-| 로그인과 역할 검사 | [인증·인가](secureflow/docs/project/authentication-and-authorization.md) |
-| 권한 신청·승인·거절 | [접근 권한 요청 구현](secureflow/docs/project/access-request-implementation.md) |
-| API 중복 요청 방지 | [접근 요청 멱등성](secureflow/docs/project/access-request-idempotency.md) |
-| 업무 변경과 감사 기록의 원자성 | [Transactional Outbox](secureflow/docs/project/transactional-outbox-implementation.md) |
-| 재시도와 Dead Letter | [Outbox 실패 격리](secureflow/docs/project/outbox-failure-isolation.md) |
-| 외부 로그 수집과 검색 | [보안 이벤트 수집·검색](secureflow/docs/project/security-event-ingestion-search.md) |
-| 보안 규칙과 경보 | [규칙 탐지·경보](secureflow/docs/project/rule-detection-and-alert-workflow.md) |
-| 실행·운영·부하 테스트 | [백엔드 전체 구현·운영 가이드](secureflow/docs/project/backend-completion-guide.md) |
-| 100만 건 벤치마크·k6 부하 테스트 | [100만 건 벤치마크 결과](secureflow/docs/project/performance-benchmark-2026-11-02.md) |
-| 향후 개발 순서 | [구현 로드맵](secureflow/docs/project/implementation-roadmap.md) |
+| 프로젝트 전체 설명 | [백엔드 포트폴리오 가이드](docs/project/backend-portfolio-guide.md) |
+| 전체 요청·데이터 흐름 | [아키텍처](docs/project/architecture.md) |
+| 로그인과 역할 검사 | [인증·인가](docs/project/authentication-and-authorization.md) |
+| 권한 신청·승인·거절 | [접근 권한 요청 구현](docs/project/access-request-implementation.md) |
+| API 중복 요청 방지 | [접근 요청 멱등성](docs/project/access-request-idempotency.md) |
+| 업무 변경과 감사 기록의 원자성 | [Transactional Outbox](docs/project/transactional-outbox-implementation.md) |
+| 재시도와 Dead Letter | [Outbox 실패 격리](docs/project/outbox-failure-isolation.md) |
+| 외부 로그 수집과 검색 | [보안 이벤트 수집·검색](docs/project/security-event-ingestion-search.md) |
+| 보안 규칙과 경보 | [규칙 탐지·경보](docs/project/rule-detection-and-alert-workflow.md) |
+| 실행·운영·부하 테스트 | [백엔드 전체 구현·운영 가이드](docs/project/backend-completion-guide.md) |
+| 100만 건 벤치마크·k6 부하 테스트 | [100만 건 벤치마크 결과](docs/project/performance-benchmark-2026-11-02.md) |
+| 백엔드 완료 여부와 재개 조건 | [백엔드 완료 판정](docs/project/backend-status-2026-11-02.md) |
+| 향후 개발 순서 | [구현 로드맵](docs/project/implementation-roadmap.md) |
 
 ## 4. 문서를 읽을 때 작성할 메모 양식
 
@@ -238,13 +245,13 @@ Controller 또는 Scheduler
 
 핵심 흐름을 이해한 뒤 세부 개념을 공부할 때 다음 자료를 사용한다.
 
-- [학습 문서 목록](secureflow/docs/study/README.md)
-- [Transactional Outbox와 SKIP LOCKED](secureflow/docs/study/10-transactional-outbox-and-skip-locked.md)
-- [Correlation ID와 MDC](secureflow/docs/study/11-correlation-id-and-mdc.md)
-- [Outbox 재시도와 Dead Letter](secureflow/docs/study/12-outbox-retry-and-dead-letter.md)
-- [JDBC batch와 cursor pagination](secureflow/docs/study/13-jdbc-batch-and-cursor-pagination.md)
-- [탐지 window와 watermark](secureflow/docs/study/14-detection-window-watermark-and-optimistic-locking.md)
-- [문제 해결 사례 목록](secureflow/docs/case-studies/README.md)
-- [트러블슈팅 기록](secureflow/docs/troubleshooting/README.md)
+- [학습 문서 목록](docs/study/README.md)
+- [Transactional Outbox와 SKIP LOCKED](docs/study/10-transactional-outbox-and-skip-locked.md)
+- [Correlation ID와 MDC](docs/study/11-correlation-id-and-mdc.md)
+- [Outbox 재시도와 Dead Letter](docs/study/12-outbox-retry-and-dead-letter.md)
+- [JDBC batch와 cursor pagination](docs/study/13-jdbc-batch-and-cursor-pagination.md)
+- [탐지 window와 watermark](docs/study/14-detection-window-watermark-and-optimistic-locking.md)
+- [문제 해결 사례 목록](docs/case-studies/README.md)
+- [트러블슈팅 기록](docs/troubleshooting/README.md)
 
 처음에는 2절의 일곱 단계만 따라가고, 추가 학습 문서는 핵심 흐름을 한 번 완주한 뒤 필요한 주제부터 선택해 읽는 것을 권장한다.

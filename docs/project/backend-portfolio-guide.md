@@ -105,6 +105,8 @@ docker compose up --build
 1. Secret Manager/KMS와 TLS·네트워크 정책을 실제 배포 환경에 적용한다.
 2. sliding window와 late-event 재처리 정책을 추가한다.
 3. 탐지 규칙/threshold를 관리 가능한 정책 데이터로 분리한다.
-4. 부하 측정값과 장애 복구 사례를 README에 수치로 고정한다.
+4. 동일 조건 벤치마크를 반복해 분산과 cold-cache 결과를 추가하고, 장애 복구 사례를 README에 고정한다.
+
+학습·포트폴리오 범위의 백엔드는 완료로 동결한다. 실제 배포 전 작업과 재개 조건은 [백엔드 완료 판정과 후속 작업](backend-status-2026-11-02.md)을 따른다.
 
 상세 명령·API 계약은 [백엔드 전체 구현·운영 가이드](backend-completion-guide.md)를, 단계별 설계 근거는 [구현 로드맵](implementation-roadmap.md)을 참고한다.

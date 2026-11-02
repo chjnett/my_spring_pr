@@ -2,13 +2,30 @@
 
 SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고, 위험한 행위를 판정하며, 조사 가능한 감사 근거를 제공하는 **접근 권한 감사·탐지 백엔드**다.
 
-일반 비즈니스 상태와 트랜잭션은 JPA로 관리하고, 대량 보안 이벤트 적재·검색·시간 구간 집계는 JDBC로 분리한다. 현재 구현된 사용자·권한·멱등성 기반 위에 권한 승인, Transactional Outbox, 보안 이벤트 탐지와 경보 워크플로를 단계적으로 완성한다.
+일반 비즈니스 상태와 트랜잭션은 JPA로 관리하고, 대량 보안 이벤트 적재·검색·시간 구간 집계는 JDBC로 분리한다. 권한 승인, Transactional Outbox, 보안 이벤트 탐지와 경보 워크플로를 하나의 실행 가능한 백엔드로 연결했다.
+
+2026-11-02 기준 학습·포트폴리오 범위의 백엔드는 완료되어 기능을 동결한다. 이 판정은 실서비스 운영 준비 완료를 뜻하지 않으며, 운영 전 과제와 재개 조건은 [백엔드 완료 판정](docs/project/backend-status-2026-11-02.md)에 정리했다.
 
 - [포트폴리오 목표 제품·백엔드 아키텍처](docs/project/portfolio-product-architecture.md)
 - [단계별 구현 로드맵](docs/project/implementation-roadmap.md)
 - [대화형 목표 아키텍처 다이어그램](.archify/architecture-secureflow-security-platform-20261102-150735/secureflow-security-platform.html)
 - [코드 근거 기반 현재 아키텍처](.archify/architecture-secureflow-current-20261102-163000/secureflow-current.html)
 - [백엔드 전체 구현·운영 가이드](docs/project/backend-completion-guide.md)
+- [100만 건 벤치마크 결과](docs/project/performance-benchmark-2026-11-02.md)
+- [백엔드 완료 판정과 후속 작업](docs/project/backend-status-2026-11-02.md)
+
+## 검증 결과
+
+| 항목 | 2026-11-02 개발 환경 실측 |
+| --- | ---: |
+| 자동 테스트 | 71개 통과 |
+| 100만 건 seed | 3,118 events/s, 오류 0건 |
+| 수집 부하 | 50 RPS, p95 206.58ms, 실패율 0% |
+| 검색 부하 | 30 RPS, p95 140.74ms, p99 209.03ms, 실패율 0% |
+| 표본 DB 쿼리 | 웜 캐시 기준 0.45~2.56ms |
+| Event-to-Alert | 평균 8분 5초, 최대 8분 24초 |
+
+측정은 Apple M4 개발 장비의 단일 Docker 환경과 synthetic 데이터에서 한 차례 수행했다. 운영 SLO나 용량 보장을 의미하지 않으며 조건과 한계는 벤치마크 보고서를 기준으로 해석한다.
 
 ## 현재 아키텍처
 

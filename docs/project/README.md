@@ -14,6 +14,7 @@
 - [보안 이벤트 배치 수집·검색 구현 결과](security-event-ingestion-search.md)
 - [규칙 기반 탐지와 경보 워크플로 구현 결과](rule-detection-and-alert-workflow.md)
 - [백엔드 전체 구현·운영 가이드](backend-completion-guide.md)
+- [백엔드 완료 판정과 후속 작업](backend-status-2026-11-02.md)
 - [2026-11-02 로컬 실동작 검증](live-smoke-test-2026-11-02.md)
 - [2026-11-02 100만 건 벤치마크 및 성능 결과](performance-benchmark-2026-11-02.md)
 

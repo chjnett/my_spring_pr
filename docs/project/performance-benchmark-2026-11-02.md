@@ -48,7 +48,7 @@ SELECT pg_size_pretty(pg_total_relation_size('security_events')) AS total_size,
 | 구분 | 용량 | 비고 |
 | --- | --- | --- |
 | **테이블 힙 (Table Data)** | 411 MB | 100만 건 JSON 페이로드 및 메타데이터 |
-| **인덱스 (Indexes)** | 340 MB | 5개 B-tree 인덱스 (`occurred_at`, `source_ip`, `outcome` 등) |
+| **인덱스 (Indexes)** | 340 MB | PK·UNIQUE와 검색용 B-tree 인덱스 전체 |
 | **총 릴레이션 크기** | **751 MB** | 100만 건 기준 전체 사용 디스크 용량 |
 
 ---
@@ -101,7 +101,7 @@ SELECT pg_size_pretty(pg_total_relation_size('security_events')) AS total_size,
 | **99 백분위수 (p99)** | **209.03 ms** | `< 700 ms` | **PASS** |
 | **전송 데이터 (Network In)** | 58 MB (641 kB/s) | - | - |
 
-> **분석**: 100만 건 테이블을 대상으로 24시간 범위 필터 및 커서 정렬을 수행했음에도 p95 지연이 140ms, p99 지연이 209ms로 매우 우수하게 측정되었다. 이는 복합 인덱스(`idx_security_events_type_occurred_at`)와 PostgreSQL의 Incremental Sort 최적화가 완벽히 동작했기 때문이다.
+> **분석**: 100만 건 테이블을 대상으로 24시간 범위 필터 및 커서 정렬을 수행했을 때 p95 140ms, p99 209ms를 기록했다. 실행 계획에서는 `idx_security_events_type_occurred_at`와 Incremental Sort가 선택됐다. API 수치는 인증, JDBC 매핑, JSON 직렬화와 컨테이너 네트워크 시간을 포함하므로 아래의 DB 단독 실행 시간과 직접 비교하면 안 된다.
 
 ---
 
@@ -253,7 +253,7 @@ secureflow_detection_event_to_alert_latency_seconds_max{application="secureflow"
 | **평균 Event-to-Alert 지연** | **484.69초 (약 8분 5초)** | 원인 이벤트 발생부터 경보 저장까지의 평균 지연 |
 | **최대 Event-to-Alert 지연 (`latency_seconds_max`)** | **504.50초 (약 8분 24초)** | 10분 윈도우의 앞쪽 이벤트에 대한 최대 지연 |
 
-> **분석**: Event-to-Alert 지연은 10분 배치 텀블링 윈도우 구조에서 이상적인 7~9분 범위를 나타냈다. 10분 윈도우 마감 후 유예 시간(30초) 및 스케줄러 폴링 주기(30초)를 감안할 때, 윈도우 내 마지막 발생 이벤트 기준 지연은 1분 이내로 수렴한다.
+> **분석**: 이 Timer는 각 탐지 후보의 `lastEventAt`부터 경보의 `createdAt`까지 측정한다. 이번 synthetic 데이터 분포에서는 평균 8분 5초, 최대 8분 24초였다. 따라서 현재 10분 tumbling window를 실시간 탐지로 표현해서는 안 된다. 2분 이하 SLO가 필요하다면 더 짧은 window만 적용하기보다 sliding/incremental 처리와 late-event 재처리 정책을 함께 설계해야 한다.
 
 ---
 
@@ -264,8 +264,19 @@ secureflow_detection_event_to_alert_latency_seconds_max{application="secureflow"
 2. **부하 테스트 통과**:
    - 이벤트 수집 50 RPS 부하에서 p95 206ms, 실패율 0.00% 달성.
    - 100만 건 대상 이벤트 검색 30 RPS 부하에서 p95 140ms, p99 209ms 달성.
-3. **인덱스 및 쿼리 최적화 검증**:
-   - 100만 건 규모의 테이블에서도 복합 인덱스(`occurred_at`, `event_type`, `outcome`) 설계를 통해 모든 핵심 쿼리(검색, 그룹핑 집계)가 **10ms 미만(0.45ms ~ 2.56ms)**으로 처리됨을 EXPLAIN ANALYZE로 확인했다.
+3. **인덱스 및 쿼리 실행 계획 검증**:
+   - 버퍼 캐시가 준비된 측정 시점에서 표본 검색·집계 쿼리 3종은 **10ms 미만(0.45ms~2.56ms)**이었다. 이는 해당 데이터 분포와 시간 구간에서 올바른 인덱스가 선택됐다는 증거이며, 모든 쿼리와 운영 환경의 지연을 보장하는 수치는 아니다.
 4. **운영 환경 권장사항**:
    - 더 빠른 실시간 경보가 필요한 경우 `windowSize`를 5분으로 단축하거나 sliding window/incremental rule을 도입할 수 있다.
-   - 100만 건 단위의 데이터 보관 주기에 맞춰 PostgreSQL의 파티셔닝(예: 월별/주별 Range Partitioning on `occurred_at`)을 적용하면 향후 수천만 건으로 확장 시에도 성능을 유지할 수 있다.
+   - 수천만 건 또는 장기 보존 요구가 확인되면 `occurred_at` 기준 파티셔닝과 보존 정책을 별도 벤치마크한 뒤 적용한다.
+
+## 8. 측정 해석의 한계
+
+- Apple M4 개발 장비의 단일 Docker 환경에서 한 차례 수행한 결과다.
+- 별도의 CPU·메모리 제한을 둔 운영 환경 결과가 아니다.
+- 데이터는 synthetic 분포이며 실제 고객별 편향과 payload 다양성을 대표하지 않는다.
+- EXPLAIN ANALYZE는 버퍼 캐시가 준비된 상태의 표본 구간 결과다. cold-cache 결과와 반복 실행 분산은 측정하지 않았다.
+- k6 임계값 통과는 이 개발 환경의 포트폴리오 기준을 만족했다는 뜻이며 운영 SLO를 확정한 것이 아니다.
+- Event-to-Alert 평균 약 8분은 현재 tumbling window 설계의 비용을 보여준다. 낮은 지연 요구가 생기면 탐지 방식을 재설계해야 한다.
+
+따라서 이 보고서는 “100만 건 개발 데이터에서 현재 설계가 재현 가능하게 동작했다”는 근거로 사용하고, 실서비스 용량 산정 자료로 직접 사용하지 않는다.
