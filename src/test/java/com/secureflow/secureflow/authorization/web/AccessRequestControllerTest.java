@@ -1,0 +1,90 @@
+package com.secureflow.secureflow.authorization.web;
+
+import com.secureflow.secureflow.authorization.application.AccessRequestResult;
+import com.secureflow.secureflow.authorization.application.AccessRequestService;
+import com.secureflow.secureflow.authorization.domain.Role;
+import com.secureflow.secureflow.authorization.domain.RoleGrantRequestStatus;
+import com.secureflow.secureflow.global.exception.SelfApprovalNotAllowedException;
+import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.webmvc.test.autoconfigure.WebMvcTest;
+import org.springframework.http.MediaType;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
+import org.springframework.test.web.servlet.MockMvc;
+
+import java.time.Instant;
+
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
+@WebMvcTest(AccessRequestController.class)
+class AccessRequestControllerTest {
+
+    @Autowired MockMvc mockMvc;
+    @MockitoBean AccessRequestService accessRequestService;
+
+    @Test
+    void createsAccessRequestWithActorHeader() throws Exception {
+        when(accessRequestService.create(eq(1L), any()))
+                .thenReturn(result(RoleGrantRequestStatus.PENDING, null));
+
+        mockMvc.perform(post("/api/access-requests")
+                        .header("X-Actor-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"targetUserId":2,"role":"ADMIN","reason":"배포 작업"}
+                                """))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.requesterId").value(1))
+                .andExpect(jsonPath("$.status").value("PENDING"));
+    }
+
+    @Test
+    void approvesAccessRequest() throws Exception {
+        when(accessRequestService.approve(10L, 3L, "업무 확인"))
+                .thenReturn(result(RoleGrantRequestStatus.APPROVED, 3L));
+
+        mockMvc.perform(post("/api/access-requests/10/approve")
+                        .header("X-Actor-Id", "3")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"reason\":\"업무 확인\"}"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.status").value("APPROVED"))
+                .andExpect(jsonPath("$.reviewerId").value(3));
+    }
+
+    @Test
+    void selfApprovalReturns403() throws Exception {
+        when(accessRequestService.approve(10L, 1L, null))
+                .thenThrow(new SelfApprovalNotAllowedException(10L, 1L));
+
+        mockMvc.perform(post("/api/access-requests/10/approve")
+                        .header("X-Actor-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{}"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.code").value("SELF_APPROVAL_NOT_ALLOWED"));
+    }
+
+    @Test
+    void invalidCreateBodyReturns400() throws Exception {
+        mockMvc.perform(post("/api/access-requests")
+                        .header("X-Actor-Id", "1")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"targetUserId\":-1,\"role\":null,\"reason\":\"\"}"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value("VALIDATION_ERROR"));
+    }
+
+    private AccessRequestResult result(RoleGrantRequestStatus status, Long reviewerId) {
+        Instant now = Instant.parse("2026-11-02T00:00:00Z");
+        return new AccessRequestResult(
+                10L, 1L, 2L, Role.ADMIN, "배포 작업", status,
+                reviewerId, null, reviewerId == null ? null : now, 0L, now, now
+        );
+    }
+}

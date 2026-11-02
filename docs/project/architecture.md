@@ -28,6 +28,14 @@ UserExistencePort            user 모듈에 요구하는 최소 조회 계약
 UserJpaExistenceAdapter      현재는 UserRepository로 계약을 구현
     ↓
 RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
+
+AccessRequestController       권한 요청·승인·거절 HTTP 계약
+    ↓
+AccessRequestService          상태 전이와 역할 부여의 단일 트랜잭션
+    ↓
+RoleGrantRequest (@Version)   PENDING → APPROVED/REJECTED, 동시 수정 감지
+    ↓
+RoleGrantRequestRepository → PostgreSQL role_grant_requests
 ```
 
 ## 기술 스택
@@ -49,6 +57,9 @@ RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
 | `POST /api/users` | `201 Created` | 잘못된 입력 `400`, 중복 이메일 `409 DUPLICATE_EMAIL` |
 | `PATCH /api/users/{id}` | `200 OK` | 없는 사용자 `404 USER_NOT_FOUND`, 잘못된 이름 `400` |
 | `POST /api/users/{userId}/role-grants` | `201 Created` | `Idempotency-Key` 재사용 본문 불일치 `422`, 새 키의 같은 권한 `409` |
+| `POST /api/access-requests` | `201 Created` | 없는 사용자 `404`, 잘못된 입력 `400` |
+| `POST /api/access-requests/{id}/approve` | `200 OK` | 자기 승인 `403`, 재처리·동시 수정 `409` |
+| `POST /api/access-requests/{id}/reject` | `200 OK` | 자기 검토 `403`, 재처리·동시 수정 `409` |
 
 ## 설계 원칙
 
@@ -59,7 +70,8 @@ RoleGrantRepository → PostgreSQL role_grants(user_id, role) UNIQUE
 5. 테스트는 개발용 Compose DB를 공유하지 않는다.
 6. 모듈 경계를 넘을 때는 다른 모듈의 Entity가 아니라 ID와 Port 계약을 사용한다.
 7. 멱등성 키는 `UNIQUE(user_id, request_scope, idempotency_key)`로 먼저 선점하고, 권한 변경과 최초 응답 기록을 하나의 트랜잭션으로 완료한다.
+8. 검토가 필요한 상태 전이는 `@Version`으로 경쟁을 감지하고, 요청 UPDATE를 flush한 뒤 역할을 저장한다.
 
 ## 다음 확장 경로
 
-`RoleGrant`의 비즈니스 중복 제약과 `IdempotencyRecord`의 재시도 식별 제약을 분리했다. 다음 단계에서는 멱등성 기록의 TTL·실패 복구와 낙관적 락을 비교한다.
+권한 요청의 낙관적 락을 추가했다. 다음 단계에서는 요청 생성 멱등성과 Spring Security actor 식별을 완료한 뒤 Transactional Outbox 감사 로그로 확장한다.

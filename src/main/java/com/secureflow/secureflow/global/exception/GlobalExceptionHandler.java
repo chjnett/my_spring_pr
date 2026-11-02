@@ -2,6 +2,7 @@ package com.secureflow.secureflow.global.exception;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
@@ -35,6 +36,27 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(IdempotencyRequestInProgressException.class)
     public ResponseEntity<ErrorResponse> handleIdempotencyRequestInProgress(IdempotencyRequestInProgressException exception) {
         return response(HttpStatus.CONFLICT, "IDEMPOTENCY_REQUEST_IN_PROGRESS", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(AccessRequestNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleAccessRequestNotFound(AccessRequestNotFoundException exception) {
+        return response(HttpStatus.NOT_FOUND, "ACCESS_REQUEST_NOT_FOUND", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(AccessRequestAlreadyDecidedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessRequestAlreadyDecided(AccessRequestAlreadyDecidedException exception) {
+        return response(HttpStatus.CONFLICT, "ACCESS_REQUEST_ALREADY_DECIDED", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(SelfApprovalNotAllowedException.class)
+    public ResponseEntity<ErrorResponse> handleSelfApproval(SelfApprovalNotAllowedException exception) {
+        return response(HttpStatus.FORBIDDEN, "SELF_APPROVAL_NOT_ALLOWED", exception.getMessage(), Map.of());
+    }
+
+    @ExceptionHandler(ObjectOptimisticLockingFailureException.class)
+    public ResponseEntity<ErrorResponse> handleOptimisticLock(ObjectOptimisticLockingFailureException exception) {
+        return response(HttpStatus.CONFLICT, "ACCESS_REQUEST_CONCURRENTLY_MODIFIED",
+                "다른 검토자가 먼저 권한 요청을 처리했습니다.", Map.of());
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
