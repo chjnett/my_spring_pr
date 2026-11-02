@@ -38,6 +38,14 @@ AccessRequestService          상태 전이와 역할 부여의 단일 트랜잭
 RoleGrantRequest (@Version)   PENDING → APPROVED/REJECTED, 동시 수정 감지
     ↓
 RoleGrantRequestRepository → PostgreSQL role_grant_requests
+
+Business Service (@Transactional)
+    ├─ JPA Aggregate 변경
+    └─ AuditEventRecorder → PostgreSQL audit_outbox(PENDING)
+                                  ↓
+AuditOutboxPublisher (JDBC)  FOR UPDATE SKIP LOCKED로 작업 선점
+                                  ↓
+PostgreSQL security_events   event_id UNIQUE 후 Outbox PUBLISHED
 ```
 
 ## 기술 스택
@@ -48,6 +56,7 @@ RoleGrantRequestRepository → PostgreSQL role_grant_requests
 | Framework | Spring Boot 4.1 | Web MVC, Validation, JPA 실행 환경 |
 | Security | Spring Security, BCrypt | DB 인증 principal과 역할 기반 접근 제어 |
 | Persistence | Spring Data JPA / Hibernate | Entity 관리와 변경 감지 |
+| Audit publishing | Spring JDBC | PostgreSQL 행 잠금 선점과 보안 이벤트 적재 |
 | Development DB | PostgreSQL 16 Docker Compose | IntelliJ에서 API를 직접 확인하는 영속 환경 |
 | Fast test | JUnit 5, Mockito, H2 | 빠른 단위·JPA 테스트 |
 | Integration test | Testcontainers PostgreSQL 16 | 실제 PostgreSQL 제약·동시성 검증 |
@@ -76,7 +85,9 @@ RoleGrantRequestRepository → PostgreSQL role_grant_requests
 8. 검토가 필요한 상태 전이는 `@Version`으로 경쟁을 감지하고, 요청 UPDATE를 flush한 뒤 역할을 저장한다.
 9. 권한 요청 생성은 API scope별 멱등성 키를 원자적으로 선점하고 최초 `PENDING` 응답을 재생한다.
 10. actor ID는 클라이언트 입력이 아니라 인증 principal에서 가져오고, 검토 API는 `ADMIN/AUDITOR`에만 허용한다.
+11. 비즈니스 변경과 감사 Outbox는 같은 JPA 트랜잭션에 저장하고, 발행은 JDBC 트랜잭션으로 분리한다.
+12. Publisher 재시도 중복은 `security_events.event_id` UNIQUE로 최종 차단한다.
 
 ## 다음 확장 경로
 
-권한 요청 상태·멱등성·인증·인가 흐름을 완성했다. 다음 단계에서는 직접 역할 부여 API를 내부 관리 경로로 정리하고 Transactional Outbox 감사 로그로 확장한다.
+권한 요청 상태·멱등성·인증·인가와 Transactional Outbox 1차 흐름을 완성했다. 다음 단계에서는 HMAC 무결성, 실패 이벤트 격리와 관측 지표를 보강한 뒤 JDBC 이벤트 수집·검색으로 확장한다.

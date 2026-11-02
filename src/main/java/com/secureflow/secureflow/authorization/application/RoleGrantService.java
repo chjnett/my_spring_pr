@@ -9,6 +9,8 @@ import com.secureflow.secureflow.global.exception.DuplicateRoleGrantException;
 import com.secureflow.secureflow.global.exception.IdempotencyKeyReuseException;
 import com.secureflow.secureflow.global.exception.IdempotencyRequestInProgressException;
 import com.secureflow.secureflow.global.exception.UserNotFoundException;
+import com.secureflow.secureflow.audit.application.AuditEventRecorder;
+import com.secureflow.secureflow.audit.domain.AuditEventType;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,17 +29,20 @@ public class RoleGrantService {
     private final IdempotencyRecordRepository idempotencyRecordRepository;
     private final UserExistencePort userExistencePort;
     private final IdempotencyMetrics idempotencyMetrics;
+    private final AuditEventRecorder auditEventRecorder;
 
     public RoleGrantService(
             RoleGrantRepository roleGrantRepository,
             IdempotencyRecordRepository idempotencyRecordRepository,
             UserExistencePort userExistencePort,
-            IdempotencyMetrics idempotencyMetrics
+            IdempotencyMetrics idempotencyMetrics,
+            AuditEventRecorder auditEventRecorder
     ) {
         this.roleGrantRepository = roleGrantRepository;
         this.idempotencyRecordRepository = idempotencyRecordRepository;
         this.userExistencePort = userExistencePort;
         this.idempotencyMetrics = idempotencyMetrics;
+        this.auditEventRecorder = auditEventRecorder;
     }
 
     @Transactional
@@ -53,7 +58,8 @@ public class RoleGrantService {
     public IdempotentGrantedRole grantRoleIdempotently(
             Long userId,
             GrantRoleCommand command,
-            String idempotencyKey
+            String idempotencyKey,
+            Long actorId
     ) {
         String requestHash = requestHash(command);
         int reserved = idempotencyRecordRepository.reserve(userId, ROLE_GRANT_SCOPE, idempotencyKey, requestHash);
@@ -73,6 +79,13 @@ public class RoleGrantService {
                 .findByUserIdAndRequestScopeAndIdempotencyKey(userId, ROLE_GRANT_SCOPE, idempotencyKey)
                 .orElseThrow(() -> new IllegalStateException("선점한 멱등성 요청을 찾을 수 없습니다."));
         record.complete(savedRoleGrant);
+        auditEventRecorder.record(
+                AuditEventType.ROLE_GRANTED,
+                "RoleGrant",
+                savedRoleGrant.getId(),
+                actorId,
+                new RoleGrantedPayload(savedRoleGrant.getUserId(), savedRoleGrant.getRole().name())
+        );
         idempotencyMetrics.recordCreated();
 
         return new IdempotentGrantedRole(toGrantedRole(savedRoleGrant), false);
@@ -150,5 +163,8 @@ public class RoleGrantService {
             cause = cause.getCause();
         }
         return false;
+    }
+
+    private record RoleGrantedPayload(Long targetUserId, String role) {
     }
 }

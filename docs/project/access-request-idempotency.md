@@ -72,7 +72,7 @@ ACCESS_REQUEST_IDEMPOTENCY_RESULT total=20 created=1 replayed=19 persisted=1 rec
 - 요청 승인 후 재시도해도 응답은 최초 `PENDING`, 실제 DB 상태는 `APPROVED`
 - Flyway V1~V3와 Hibernate schema validation 통과
 
-현재 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **41개 테스트 통과, 실패 0개, 31초**다.
+2026-11-02 최신 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **45개 테스트 통과, 실패 0개**다.
 
 ## 남은 운영 과제
 

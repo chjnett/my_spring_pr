@@ -40,3 +40,7 @@ secureflow:
     name: ${SECUREFLOW_BOOTSTRAP_ADMIN_NAME:SecureFlow Admin}
     email: ${SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL:}
     password: ${SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD:}
+  outbox:
+    publisher:
+      enabled: ${OUTBOX_PUBLISHER_ENABLED:false}
+      fixed-delay: ${OUTBOX_PUBLISHER_FIXED_DELAY:1000}

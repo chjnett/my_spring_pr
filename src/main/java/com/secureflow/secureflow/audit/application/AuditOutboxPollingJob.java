@@ -1,0 +1,21 @@
+package com.secureflow.secureflow.audit.application;
+
+import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.scheduling.annotation.Scheduled;
+import org.springframework.stereotype.Component;
+
+@Component
+@ConditionalOnProperty(prefix = "secureflow.outbox.publisher", name = "enabled", havingValue = "true")
+public class AuditOutboxPollingJob {
+
+    private final AuditOutboxPublisher publisher;
+
+    public AuditOutboxPollingJob(AuditOutboxPublisher publisher) {
+        this.publisher = publisher;
+    }
+
+    @Scheduled(fixedDelayString = "${secureflow.outbox.publisher.fixed-delay:1000}")
+    public void publish() {
+        publisher.publishBatch(100);
+    }
+}

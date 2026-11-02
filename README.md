@@ -28,6 +28,15 @@ SecureFlow는 조직의 중요 권한 변경과 보안 이벤트를 수집하고
    ./gradlew bootRun
    ```
 
+   Transactional Outbox Publisher까지 실행하려면 다음 환경 변수를 추가한다.
+
+   ```bash
+   OUTBOX_PUBLISHER_ENABLED=true \
+   SECUREFLOW_BOOTSTRAP_ADMIN_EMAIL=admin@example.com \
+   SECUREFLOW_BOOTSTRAP_ADMIN_PASSWORD='change-this-password' \
+   ./gradlew bootRun
+   ```
+
 5. 테스트를 실행한다.
 
    ```bash

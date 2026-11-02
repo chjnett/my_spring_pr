@@ -9,5 +9,6 @@
 | 07 | [권한 요청 상태 머신과 낙관적 락](07-access-request-state-and-optimistic-locking.md) | 상태 전이·`@Version`·flush와 commit 차이를 설명한다. |
 | 08 | [멱등성 선점과 최초 응답 재생](08-idempotency-reservation-and-response-replay.md) | 원자적 선점·request hash·응답 snapshot의 필요성을 설명한다. |
 | 09 | [Spring Security principal과 RBAC](09-spring-security-principal-and-rbac.md) | 인증·인가·principal·authority·BCrypt의 책임을 설명한다. |
+| 10 | [Transactional Outbox와 SKIP LOCKED](10-transactional-outbox-and-skip-locked.md) | dual-write·행 잠금 선점·재시도 멱등성을 장애 시점으로 설명한다. |
 
 스터디 문서는 문제 해결 결과를 과장하지 않는다. 구현 전 알아야 할 개념, 실습 범위, 확인 질문을 관리한다.

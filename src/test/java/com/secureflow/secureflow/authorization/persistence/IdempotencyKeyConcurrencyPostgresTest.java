@@ -77,7 +77,7 @@ class IdempotencyKeyConcurrencyPostgresTest {
                 ready.countDown();
                 assertThat(start.await(10, TimeUnit.SECONDS)).isTrue();
                 return roleGrantService.grantRoleIdempotently(
-                        user.getId(), new GrantRoleCommand(Role.ADMIN), sameKey
+                        user.getId(), new GrantRoleCommand(Role.ADMIN), sameKey, user.getId()
                 );
             }));
         }

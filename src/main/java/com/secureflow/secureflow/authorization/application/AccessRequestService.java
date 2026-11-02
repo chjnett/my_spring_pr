@@ -9,6 +9,8 @@ import com.secureflow.secureflow.global.exception.AccessRequestNotFoundException
 import com.secureflow.secureflow.global.exception.IdempotencyKeyReuseException;
 import com.secureflow.secureflow.global.exception.IdempotencyRequestInProgressException;
 import com.secureflow.secureflow.global.exception.UserNotFoundException;
+import com.secureflow.secureflow.audit.application.AuditEventRecorder;
+import com.secureflow.secureflow.audit.domain.AuditEventType;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -26,17 +28,20 @@ public class AccessRequestService {
     private final UserExistencePort userExistencePort;
     private final RoleGrantService roleGrantService;
     private final IdempotencyRecordRepository idempotencyRecordRepository;
+    private final AuditEventRecorder auditEventRecorder;
 
     public AccessRequestService(
             RoleGrantRequestRepository requestRepository,
             UserExistencePort userExistencePort,
             RoleGrantService roleGrantService,
-            IdempotencyRecordRepository idempotencyRecordRepository
+            IdempotencyRecordRepository idempotencyRecordRepository,
+            AuditEventRecorder auditEventRecorder
     ) {
         this.requestRepository = requestRepository;
         this.userExistencePort = userExistencePort;
         this.roleGrantService = roleGrantService;
         this.idempotencyRecordRepository = idempotencyRecordRepository;
+        this.auditEventRecorder = auditEventRecorder;
     }
 
     @Transactional
@@ -61,6 +66,15 @@ public class AccessRequestService {
         ));
         IdempotencyRecord record = findIdempotencyRecord(requesterId, idempotencyKey);
         record.complete(request);
+        auditEventRecorder.record(
+                AuditEventType.ACCESS_REQUEST_CREATED,
+                "RoleGrantRequest",
+                request.getId(),
+                requesterId,
+                new AccessRequestCreatedPayload(
+                        command.targetUserId(), command.role().name(), command.reason()
+                )
+        );
         return new IdempotentAccessRequestResult(AccessRequestResult.createdSnapshot(request), false);
     }
 
@@ -76,6 +90,15 @@ public class AccessRequestService {
                 request.getTargetUserId(),
                 new GrantRoleCommand(request.getRequestedRole())
         );
+        auditEventRecorder.record(
+                AuditEventType.ACCESS_REQUEST_APPROVED,
+                "RoleGrantRequest",
+                request.getId(),
+                reviewerId,
+                new AccessRequestReviewedPayload(
+                        request.getTargetUserId(), request.getRequestedRole().name(), decisionReason
+                )
+        );
         return AccessRequestResult.from(request);
     }
 
@@ -85,6 +108,15 @@ public class AccessRequestService {
         RoleGrantRequest request = findRequest(requestId);
         request.reject(reviewerId, decisionReason);
         requestRepository.saveAndFlush(request);
+        auditEventRecorder.record(
+                AuditEventType.ACCESS_REQUEST_REJECTED,
+                "RoleGrantRequest",
+                request.getId(),
+                reviewerId,
+                new AccessRequestReviewedPayload(
+                        request.getTargetUserId(), request.getRequestedRole().name(), decisionReason
+                )
+        );
         return AccessRequestResult.from(request);
     }
 
@@ -146,5 +178,11 @@ public class AccessRequestService {
         } catch (NoSuchAlgorithmException exception) {
             throw new IllegalStateException("SHA-256을 사용할 수 없습니다.", exception);
         }
+    }
+
+    private record AccessRequestCreatedPayload(Long targetUserId, String role, String reason) {
+    }
+
+    private record AccessRequestReviewedPayload(Long targetUserId, String role, String decisionReason) {
     }
 }

@@ -2,6 +2,7 @@ package com.secureflow.secureflow.authorization.web;
 
 import com.secureflow.secureflow.authorization.application.GrantRoleCommand;
 import com.secureflow.secureflow.authorization.application.RoleGrantService;
+import com.secureflow.secureflow.security.SecurityActor;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -11,6 +12,8 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.RestController;
+
+import java.security.Principal;
 
 @RestController
 @RequestMapping("/api/users/{userId}/role-grants")
@@ -25,13 +28,15 @@ public class RoleGrantController {
     @PostMapping
     public ResponseEntity<RoleGrantResponse> grantRole(
             @PathVariable Long userId,
+            Principal principal,
             @RequestHeader("Idempotency-Key") String idempotencyKey,
             @Valid @RequestBody GrantRoleRequest request
     ) {
         var result = roleGrantService.grantRoleIdempotently(
                 userId,
                 new GrantRoleCommand(request.role()),
-                idempotencyKey
+                idempotencyKey,
+                SecurityActor.userId(principal)
         );
         ResponseEntity.BodyBuilder response = ResponseEntity.status(HttpStatus.CREATED);
         if (result.replayed()) {

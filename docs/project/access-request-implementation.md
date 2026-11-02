@@ -63,7 +63,7 @@ ACCESS_REQUEST_CONCURRENCY_RESULT approvals=2 success=1 conflicts=1 role_grants=
 
 단위·웹 테스트는 생성, 승인, 거절, 자기 승인 금지, 종료 상태 재처리 금지, 입력 검증과 오류 코드를 확인한다.
 
-현재 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **41개 테스트 통과, 실패 0개, 31초**다. DB 인증까지 반영된 Flyway 최신 버전은 V4다.
+2026-11-02 최신 전체 회귀 결과는 `./gradlew test --rerun-tasks` 기준 **45개 테스트 통과, 실패 0개**다. Transactional Outbox까지 반영된 Flyway 최신 버전은 V5다.
 
 ## 남은 Phase 1 작업
 

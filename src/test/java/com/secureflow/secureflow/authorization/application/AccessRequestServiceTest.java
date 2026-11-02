@@ -8,6 +8,7 @@ import com.secureflow.secureflow.authorization.persistence.IdempotencyRecordRepo
 import com.secureflow.secureflow.authorization.domain.IdempotencyRecord;
 import com.secureflow.secureflow.global.exception.AccessRequestNotFoundException;
 import com.secureflow.secureflow.global.exception.IdempotencyKeyReuseException;
+import com.secureflow.secureflow.audit.application.AuditEventRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -32,13 +33,15 @@ class AccessRequestServiceTest {
     @Mock UserExistencePort userExistencePort;
     @Mock RoleGrantService roleGrantService;
     @Mock IdempotencyRecordRepository idempotencyRecordRepository;
+    @Mock AuditEventRecorder auditEventRecorder;
 
     private AccessRequestService service;
 
     @BeforeEach
     void setUp() {
         service = new AccessRequestService(
-                requestRepository, userExistencePort, roleGrantService, idempotencyRecordRepository
+                requestRepository, userExistencePort, roleGrantService,
+                idempotencyRecordRepository, auditEventRecorder
         );
     }
 

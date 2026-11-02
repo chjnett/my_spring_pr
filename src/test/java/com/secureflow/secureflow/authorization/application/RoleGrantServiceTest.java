@@ -7,6 +7,7 @@ import com.secureflow.secureflow.authorization.persistence.IdempotencyRecordRepo
 import com.secureflow.secureflow.authorization.observability.IdempotencyMetrics;
 import com.secureflow.secureflow.global.exception.DuplicateRoleGrantException;
 import com.secureflow.secureflow.global.exception.UserNotFoundException;
+import com.secureflow.secureflow.audit.application.AuditEventRecorder;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -38,12 +39,16 @@ class RoleGrantServiceTest {
     @Mock
     private IdempotencyMetrics idempotencyMetrics;
 
+    @Mock
+    private AuditEventRecorder auditEventRecorder;
+
     private RoleGrantService roleGrantService;
 
     @BeforeEach
     void setUp() {
         roleGrantService = new RoleGrantService(
-                roleGrantRepository, idempotencyRecordRepository, userExistencePort, idempotencyMetrics
+                roleGrantRepository, idempotencyRecordRepository, userExistencePort,
+                idempotencyMetrics, auditEventRecorder
         );
     }
 

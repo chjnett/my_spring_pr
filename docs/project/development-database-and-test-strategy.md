@@ -106,7 +106,8 @@ curl -i -X POST http://localhost:8081/api/users \
 | `RoleGrantConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 동일 권한 동시 부여를 DB 제약이 한 건으로 제한하는지 |
 | `IdempotencyKeyConcurrencyPostgresTest` | Testcontainers PostgreSQL 16 | 같은 키 20건이 최초 결과 한 건을 재사용하는지 |
 | `SecurityAuthenticationIntegrationTest` | Testcontainers PostgreSQL 16 | BCrypt 인증과 MEMBER/ADMIN 역할 인가 |
-| `SecureflowApplicationTests` | H2 + Flyway | V1~V4 migration 적용과 JPA schema validation |
+| `TransactionalOutboxPostgresTest` | Testcontainers PostgreSQL 16 | Outbox 원자성, 재처리, `SKIP LOCKED` 동시 Publisher |
+| `SecureflowApplicationTests` | H2 + Flyway | V1~V5 migration 적용과 JPA schema validation |
 
 Testcontainers 테스트는 Docker를 사용하지만 Compose의 `secureflow-postgres` 컨테이너를 재사용하지 않는다. 테스트 전용 PostgreSQL 컨테이너를 만들고, 테스트가 끝나면 정리한다.
 
