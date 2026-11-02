@@ -187,6 +187,8 @@ k6 run -e AUTHORIZATION="$AUTHORIZATION" loadtest/security-event-search.js
 
 seed/부하 테스트는 개발 DB에서만 수행한다. 운영 DB에 임의 이벤트를 넣거나 threshold를 충족시키는 것은 실제 경보·감사 데이터에 영향을 준다.
 
+100만 건 실제 시드, k6 수집·검색 부하 테스트 실측 결과, 핵심 쿼리 EXPLAIN ANALYZE 실행 계획 및 Event-to-Alert 지연 통계는 [100만 건 벤치마크 및 성능 결과 보고서](performance-benchmark-2026-11-02.md)에 상세히 기록되어 있다.
+
 ## CI와 보안 분석
 
 - `.github/workflows/verify.yml`: push/PR에서 JDK 21 전체 테스트와 Docker image build를 실행한다.
@@ -203,6 +205,6 @@ seed/부하 테스트는 개발 DB에서만 수행한다. 운영 DB에 임의 �
 2. HMAC canonical data에 검색 컬럼을 직접 포함하고 이전 version 호환 key ring을 구현한다.
 3. tumbling window를 sliding/incremental rule과 late-event 재처리 정책으로 확장한다.
 4. DB 권한 차원의 append-only, Secret Manager/KMS, TLS와 네트워크 분리를 적용한다.
-5. seed 결과를 기준으로 p50/p95/p99, 처리량, event-to-alert SLO를 실제 숫자로 기록한다.
+5. 100만 건 seed 기준 p50/p95/p99 지연 시간, 처리량, event-to-alert 실측을 완료했다([100만 건 벤치마크 결과](performance-benchmark-2026-11-02.md)). 운영 환경에 배포할 때는 이를 기준으로 지속적 모니터링 경보(Alerting Rule)를 구성한다.
 
 이 범위와 한계를 분명히 하면 “단순 CRUD 스터디”가 아니라 트랜잭션, 멱등성, 동시성, 감사 무결성, 운영 관측을 직접 설계·검증한 백엔드 포트폴리오가 된다.

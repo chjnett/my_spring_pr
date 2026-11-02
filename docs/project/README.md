@@ -15,5 +15,6 @@
 - [규칙 기반 탐지와 경보 워크플로 구현 결과](rule-detection-and-alert-workflow.md)
 - [백엔드 전체 구현·운영 가이드](backend-completion-guide.md)
 - [2026-11-02 로컬 실동작 검증](live-smoke-test-2026-11-02.md)
+- [2026-11-02 100만 건 벤치마크 및 성능 결과](performance-benchmark-2026-11-02.md)
 
 기능을 추가하거나 인프라를 바꾸면 먼저 이 문서가 실제 코드와 일치하는지 확인한다.
